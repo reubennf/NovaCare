@@ -1,6 +1,6 @@
 ﻿from fastapi import FastAPI
 from app.core.config import settings
-from app.api.routes import profiles, medications, companion, missions, caregiver
+from app.api.routes import profiles, medications, companion, missions, caregiver, social
 
 app = FastAPI(
     title="Novacare API",
@@ -13,6 +13,7 @@ app.include_router(medications.router)
 app.include_router(companion.router)
 app.include_router(missions.router)
 app.include_router(caregiver.router)
+app.include_router(social.router)
 
 @app.get("/health")
 def health_check():
