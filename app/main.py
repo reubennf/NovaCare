@@ -1,11 +1,14 @@
 ﻿from fastapi import FastAPI
 from app.core.config import settings
+from app.api.routes import profiles
 
 app = FastAPI(
-    title="Eldercare API",
+    title="Novacare API",
     version="0.1.0",
     docs_url="/docs" if settings.APP_ENV == "development" else None,
 )
+
+app.include_router(profiles.router)
 
 @app.get("/health")
 def health_check():
