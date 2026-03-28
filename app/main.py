@@ -1,5 +1,6 @@
 ﻿from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.core.config import settings
 from app.api.routes import profiles, medications, companion, missions, caregiver, social, notifications
@@ -11,11 +12,9 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
     logger.info("Starting scheduler...")
     start_scheduler()
     yield
-    # Shutdown
     logger.info("Stopping scheduler...")
     stop_scheduler()
 
@@ -24,6 +23,17 @@ app = FastAPI(
     version="0.1.0",
     docs_url="/docs" if settings.APP_ENV == "development" else None,
     lifespan=lifespan
+)
+
+# CORS — allows your React frontend to call this API
+origins = [o.strip() for o in settings.ALLOWED_ORIGINS.split(",")]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 @app.exception_handler(Exception)
@@ -41,7 +51,6 @@ app.include_router(missions.router)
 app.include_router(caregiver.router)
 app.include_router(social.router)
 app.include_router(notifications.router)
-
 
 @app.get("/health")
 def health_check():
