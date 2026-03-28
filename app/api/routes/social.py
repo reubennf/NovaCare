@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Header
+from fastapi import APIRouter, HTTPException, Depends
 from app.schemas.social import (
     EventResponse, RSVPRequest, RSVPResponse,
     FriendRequest, FriendshipResponse, FriendMessageRequest
@@ -6,21 +6,15 @@ from app.schemas.social import (
 from app.services.social_service import get_friend_ids, get_or_create_friend_thread
 from app.core.db import supabase
 from datetime import datetime
+from app.core.auth import get_current_user_id
+
 
 router = APIRouter(prefix="/social", tags=["social"])
-
-def get_user_id(authorization: str) -> str:
-    token = authorization.replace("Bearer ", "")
-    user = supabase.auth.get_user(token)
-    if not user or not user.user:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-    return user.user.id
 
 # --- Events ---
 
 @router.get("/events", response_model=list[EventResponse])
-def get_events(authorization: str = Header(...), category: str = None):
-    get_user_id(authorization)
+def get_events(user_id: str = Depends(get_current_user_id), category: str = None):
     query = supabase.table("community_events")\
         .select("*")\
         .eq("status", "active")\
@@ -31,8 +25,7 @@ def get_events(authorization: str = Header(...), category: str = None):
     return result.data
 
 @router.get("/events/{event_id}", response_model=EventResponse)
-def get_event(event_id: str, authorization: str = Header(...)):
-    get_user_id(authorization)
+def get_event(event_id: str, user_id: str = Depends(get_current_user_id)):
     result = supabase.table("community_events")\
         .select("*")\
         .eq("id", event_id)\
@@ -43,8 +36,7 @@ def get_event(event_id: str, authorization: str = Header(...)):
     return result.data
 
 @router.post("/events/{event_id}/rsvp", response_model=RSVPResponse)
-def rsvp_event(event_id: str, payload: RSVPRequest, authorization: str = Header(...)):
-    user_id = get_user_id(authorization)
+def rsvp_event(event_id: str, payload: RSVPRequest, user_id: str = Depends(get_current_user_id)):
 
     # Check event exists
     event = supabase.table("community_events")\
@@ -89,8 +81,7 @@ def rsvp_event(event_id: str, payload: RSVPRequest, authorization: str = Header(
     return result.data[0]
 
 @router.get("/events/{event_id}/attendees")
-def get_event_attendees(event_id: str, authorization: str = Header(...)):
-    get_user_id(authorization)
+def get_event_attendees(event_id: str, user_id: str = Depends(get_current_user_id)):
     result = supabase.table("event_rsvps")\
         .select("*, profiles(preferred_name, avatar_url)")\
         .eq("event_id", event_id)\
@@ -99,8 +90,7 @@ def get_event_attendees(event_id: str, authorization: str = Header(...)):
     return result.data
 
 @router.get("/my-events")
-def get_my_events(authorization: str = Header(...)):
-    user_id = get_user_id(authorization)
+def get_my_events(user_id: str = Depends(get_current_user_id)):
     result = supabase.table("event_rsvps")\
         .select("*, community_events(*)")\
         .eq("user_id", user_id)\
@@ -110,8 +100,7 @@ def get_my_events(authorization: str = Header(...)):
 # --- Friendships ---
 
 @router.post("/friends/request")
-def send_friend_request(payload: FriendRequest, authorization: str = Header(...)):
-    user_id = get_user_id(authorization)
+def send_friend_request(payload: FriendRequest, user_id: str = Depends(get_current_user_id)):
 
     if user_id == payload.target_user_id:
         raise HTTPException(status_code=400, detail="Cannot add yourself")
@@ -137,8 +126,7 @@ def send_friend_request(payload: FriendRequest, authorization: str = Header(...)
     return result.data[0]
 
 @router.patch("/friends/{friendship_id}/accept")
-def accept_friend_request(friendship_id: str, authorization: str = Header(...)):
-    user_id = get_user_id(authorization)
+def accept_friend_request(friendship_id: str, user_id: str = Depends(get_current_user_id)):
     result = supabase.table("friendships")\
         .update({"status": "accepted"})\
         .eq("id", friendship_id)\
@@ -149,8 +137,7 @@ def accept_friend_request(friendship_id: str, authorization: str = Header(...)):
     return result.data[0]
 
 @router.get("/friends", response_model=list[FriendshipResponse])
-def get_friends(authorization: str = Header(...)):
-    user_id = get_user_id(authorization)
+def get_friends(user_id: str = Depends(get_current_user_id)):
     result = supabase.table("friendships")\
         .select("*")\
         .eq("status", "accepted")\
@@ -159,8 +146,7 @@ def get_friends(authorization: str = Header(...)):
     return result.data
 
 @router.get("/friends/pending")
-def get_pending_requests(authorization: str = Header(...)):
-    user_id = get_user_id(authorization)
+def get_pending_requests(user_id: str = Depends(get_current_user_id)):
     result = supabase.table("friendships")\
         .select("*, profiles!friendships_user_id_1_fkey(preferred_name, avatar_url)")\
         .eq("user_id_2", user_id)\
@@ -171,8 +157,7 @@ def get_pending_requests(authorization: str = Header(...)):
 # --- Friend chat ---
 
 @router.post("/friends/message")
-def send_friend_message(payload: FriendMessageRequest, authorization: str = Header(...)):
-    user_id = get_user_id(authorization)
+def send_friend_message(payload: FriendMessageRequest, user_id: str = Depends(get_current_user_id)):
 
     # Verify they are actually friends
     friend_ids = get_friend_ids(user_id)
@@ -199,8 +184,7 @@ def send_friend_message(payload: FriendMessageRequest, authorization: str = Head
     }
 
 @router.get("/friends/{friend_id}/messages")
-def get_friend_messages(friend_id: str, authorization: str = Header(...)):
-    user_id = get_user_id(authorization)
+def get_friend_messages(friend_id: str, user_id: str = Depends(get_current_user_id)):
 
     friend_ids = get_friend_ids(user_id)
     if friend_id not in friend_ids:

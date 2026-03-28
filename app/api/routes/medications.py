@@ -1,36 +1,25 @@
-from fastapi import APIRouter, HTTPException, Header
+from fastapi import APIRouter, HTTPException, Depends
 from app.schemas.medication import (
     MedicationCreate, MedicationUpdate, MedicationResponse,
     ScheduleCreate, ScheduleResponse,
     MedicationLogUpdate, MedicationLogResponse
 )
 from app.core.db import supabase
+from app.core.auth import get_current_user_id
 from datetime import datetime, timedelta
 import uuid
 
 router = APIRouter(prefix="/medications", tags=["medications"])
 
-def get_user_id(authorization: str) -> str:
-    token = authorization.replace("Bearer ", "")
-    user = supabase.auth.get_user(token)
-    if not user or not user.user:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-    return user.user.id
-
-# --- Medications ---
-
 @router.get("/", response_model=list[MedicationResponse])
-def get_medications(authorization: str = Header(...)):
-    user_id = get_user_id(authorization)
+def get_medications(user_id: str = Depends(get_current_user_id)):
     result = supabase.table("medications").select("*").eq("user_id", user_id).eq("active", True).execute()
     return result.data
 
 @router.post("/", response_model=MedicationResponse)
-def create_medication(payload: MedicationCreate, authorization: str = Header(...)):
-    user_id = get_user_id(authorization)
+def create_medication(payload: MedicationCreate, user_id: str = Depends(get_current_user_id)):
     data = payload.model_dump(exclude_none=True)
     data["user_id"] = user_id
-    # convert date fields to string so Supabase accepts them
     for field in ["start_date", "end_date"]:
         if field in data:
             data[field] = str(data[field])
@@ -40,8 +29,7 @@ def create_medication(payload: MedicationCreate, authorization: str = Header(...
     return result.data[0]
 
 @router.patch("/{medication_id}", response_model=MedicationResponse)
-def update_medication(medication_id: str, payload: MedicationUpdate, authorization: str = Header(...)):
-    user_id = get_user_id(authorization)
+def update_medication(medication_id: str, payload: MedicationUpdate, user_id: str = Depends(get_current_user_id)):
     updates = payload.model_dump(exclude_none=True)
     for field in ["start_date", "end_date"]:
         if field in updates:
@@ -53,17 +41,12 @@ def update_medication(medication_id: str, payload: MedicationUpdate, authorizati
     return result.data[0]
 
 @router.delete("/{medication_id}")
-def delete_medication(medication_id: str, authorization: str = Header(...)):
-    user_id = get_user_id(authorization)
+def delete_medication(medication_id: str, user_id: str = Depends(get_current_user_id)):
     supabase.table("medications").update({"active": False}).eq("id", medication_id).eq("user_id", user_id).execute()
     return {"message": "Medication deactivated"}
 
-# --- Schedules ---
-
 @router.post("/{medication_id}/schedules", response_model=ScheduleResponse)
-def create_schedule(medication_id: str, payload: ScheduleCreate, authorization: str = Header(...)):
-    user_id = get_user_id(authorization)
-    # verify this medication belongs to the user
+def create_schedule(medication_id: str, payload: ScheduleCreate, user_id: str = Depends(get_current_user_id)):
     med = supabase.table("medications").select("id").eq("id", medication_id).eq("user_id", user_id).single().execute()
     if not med.data:
         raise HTTPException(status_code=404, detail="Medication not found")
@@ -75,24 +58,19 @@ def create_schedule(medication_id: str, payload: ScheduleCreate, authorization: 
     result = supabase.table("medication_schedules").insert(data).execute()
     if not result.data:
         raise HTTPException(status_code=400, detail="Failed to create schedule")
-    # auto-generate logs for next 7 days
     generate_logs(result.data[0], user_id)
     return result.data[0]
 
 @router.get("/{medication_id}/schedules", response_model=list[ScheduleResponse])
-def get_schedules(medication_id: str, authorization: str = Header(...)):
-    user_id = get_user_id(authorization)
+def get_schedules(medication_id: str, user_id: str = Depends(get_current_user_id)):
     med = supabase.table("medications").select("id").eq("id", medication_id).eq("user_id", user_id).single().execute()
     if not med.data:
         raise HTTPException(status_code=404, detail="Medication not found")
     result = supabase.table("medication_schedules").select("*").eq("medication_id", medication_id).execute()
     return result.data
 
-# --- Logs ---
-
 @router.get("/logs/today", response_model=list[MedicationLogResponse])
-def get_todays_logs(authorization: str = Header(...)):
-    user_id = get_user_id(authorization)
+def get_todays_logs(user_id: str = Depends(get_current_user_id)):
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0).isoformat()
     today_end = datetime.utcnow().replace(hour=23, minute=59, second=59).isoformat()
     result = supabase.table("medication_logs")\
@@ -104,8 +82,7 @@ def get_todays_logs(authorization: str = Header(...)):
     return result.data
 
 @router.patch("/logs/{log_id}", response_model=MedicationLogResponse)
-def update_log(log_id: str, payload: MedicationLogUpdate, authorization: str = Header(...)):
-    user_id = get_user_id(authorization)
+def update_log(log_id: str, payload: MedicationLogUpdate, user_id: str = Depends(get_current_user_id)):
     updates = payload.model_dump(exclude_none=True)
     if payload.status == "taken":
         updates["taken_at"] = datetime.utcnow().isoformat()
@@ -114,27 +91,19 @@ def update_log(log_id: str, payload: MedicationLogUpdate, authorization: str = H
         raise HTTPException(status_code=404, detail="Log not found")
     return result.data[0]
 
-# --- Helper: generate logs ---
-
 def generate_logs(schedule: dict, user_id: str):
-    """Generate pending log entries for the next 7 days based on a schedule."""
     logs = []
     today = datetime.utcnow().date()
     time_slots = schedule.get("time_slots", ["08:00"])
     days_of_week = schedule.get("days_of_week", [1,2,3,4,5,6,7])
-
     for day_offset in range(7):
         target_date = today + timedelta(days=day_offset)
-        # Monday=1 to match our days_of_week convention
         day_num = target_date.isoweekday()
         if day_num not in days_of_week:
             continue
         for time_slot in time_slots:
             hour, minute = map(int, time_slot.split(":"))
-            due_at = datetime(
-                target_date.year, target_date.month, target_date.day,
-                hour, minute
-            )
+            due_at = datetime(target_date.year, target_date.month, target_date.day, hour, minute)
             logs.append({
                 "id": str(uuid.uuid4()),
                 "medication_schedule_id": schedule["id"],
@@ -142,6 +111,5 @@ def generate_logs(schedule: dict, user_id: str):
                 "due_at": due_at.isoformat(),
                 "status": "pending"
             })
-
     if logs:
         supabase.table("medication_logs").insert(logs).execute()

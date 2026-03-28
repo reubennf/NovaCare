@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Header
+from fastapi import APIRouter, HTTPException, Depends
 from app.schemas.missions import UserMissionResponse, PointsResponse, ItemResponse, PurchaseRequest, StreakResponse
 from app.services.mission_service import (
     assign_daily_missions, complete_mission,
@@ -6,19 +6,13 @@ from app.services.mission_service import (
 )
 from app.core.db import supabase
 from datetime import date
+from app.core.auth import get_current_user_id
 
 router = APIRouter(prefix="/missions", tags=["missions"])
 
-def get_user_id(authorization: str) -> str:
-    token = authorization.replace("Bearer ", "")
-    user = supabase.auth.get_user(token)
-    if not user or not user.user:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-    return user.user.id
 
 @router.get("/today", response_model=list[UserMissionResponse])
-def get_todays_missions(authorization: str = Header(...)):
-    user_id = get_user_id(authorization)
+def get_todays_missions(user_id: str = Depends(get_current_user_id)):
     # Auto-assign if not already done
     assign_daily_missions(user_id)
     result = supabase.table("user_missions")\
@@ -29,16 +23,14 @@ def get_todays_missions(authorization: str = Header(...)):
     return result.data
 
 @router.post("/{mission_id}/complete")
-def complete_user_mission(mission_id: str, authorization: str = Header(...)):
-    user_id = get_user_id(authorization)
+def complete_user_mission(mission_id: str, user_id: str = Depends(get_current_user_id)):
     result = complete_mission(mission_id, user_id)
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])
     return result
 
 @router.get("/points", response_model=PointsResponse)
-def get_points(authorization: str = Header(...)):
-    user_id = get_user_id(authorization)
+def get_points(user_id: str = Depends(get_current_user_id)):
     total = get_user_points(user_id)
     transactions = supabase.table("points_ledger")\
         .select("*")\
@@ -49,8 +41,7 @@ def get_points(authorization: str = Header(...)):
     return {"total_points": total, "transactions": transactions.data}
 
 @router.get("/streak", response_model=StreakResponse)
-def get_streak(authorization: str = Header(...)):
-    user_id = get_user_id(authorization)
+def get_streak(user_id: str = Depends(get_current_user_id)):
     result = supabase.table("daily_streaks")\
         .select("*")\
         .eq("user_id", user_id)\
@@ -60,8 +51,7 @@ def get_streak(authorization: str = Header(...)):
     return result.data[0]
 
 @router.get("/shop", response_model=list[ItemResponse])
-def get_shop(authorization: str = Header(...)):
-    get_user_id(authorization)
+def get_shop(user_id: str = Depends(get_current_user_id)):
     result = supabase.table("item_catalog")\
         .select("*")\
         .eq("active", True)\
@@ -69,8 +59,7 @@ def get_shop(authorization: str = Header(...)):
     return result.data
 
 @router.post("/shop/purchase")
-def purchase_item(payload: PurchaseRequest, authorization: str = Header(...)):
-    user_id = get_user_id(authorization)
+def purchase_item(payload: PurchaseRequest, user_id: str = Depends(get_current_user_id)):
 
     # Get item
     item = supabase.table("item_catalog")\
@@ -120,8 +109,7 @@ def purchase_item(payload: PurchaseRequest, authorization: str = Header(...)):
     }
 
 @router.get("/inventory")
-def get_inventory(authorization: str = Header(...)):
-    user_id = get_user_id(authorization)
+def get_inventory(user_id: str = Depends(get_current_user_id)):
     result = supabase.table("user_items")\
         .select("*, item_catalog(*)")\
         .eq("user_id", user_id)\
