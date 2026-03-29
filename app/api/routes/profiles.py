@@ -36,3 +36,13 @@ def update_accessibility_prefs(payload: AccessibilityPrefsUpdate, user_id: str =
     if not result.data:
         raise HTTPException(status_code=400, detail="Update failed")
     return result.data[0]
+
+@router.get("/debug")
+def debug_profile(user_id: str = Depends(get_current_user_id)):
+    """Temporary debug endpoint to see what's happening."""
+    # Check what user_id we're getting
+    all_profiles = supabase.table("profiles").select("*").execute()
+    return {
+        "token_user_id": user_id,
+        "all_profiles": all_profiles.data
+    }
