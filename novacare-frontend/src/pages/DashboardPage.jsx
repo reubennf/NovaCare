@@ -89,7 +89,7 @@ export default function DashboardPage() {
     }}>
 
       {/* NovaCare logo */}
-      <div style={{ left: 160, top: 34, position: 'absolute' }}>
+      <div style={{ left: 155, top: 34, position: 'absolute' }}>
         <span style={{ color: 'black', fontSize: 20, fontWeight: 700 }}>Nova</span>
         <span style={{ color: '#20A090', fontSize: 20, fontWeight: 700 }}>Care</span>
       </div>
@@ -132,10 +132,10 @@ export default function DashboardPage() {
         src={getPetImage(companion?.species)}
         alt="pet"
         style={{
-            width: 280,
-            height: 280,
-            left: 55,
-            top: 180,
+            width: 600,
+            height: 600,
+            left: 5,
+            top: 80,
             position: 'absolute',
             objectFit: 'contain'
         }}

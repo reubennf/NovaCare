@@ -41,6 +41,9 @@ function ProtectedRoute({ children }) {
   if (onboardingStatus !== 'completed' && window.location.pathname !== '/onboarding') {
     return <Navigate to="/onboarding" />
   }
+  if (onboardingStatus === 'completed' && window.location.pathname === '/onboarding') {
+    return <Navigate to="/dashboard" />
+  }
 
   return children
 }
@@ -62,11 +65,12 @@ export default function App() {
           <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
           <Route path="/signup" element={<PublicRoute><SignupPage /></PublicRoute>} />
           <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+          <Route path="/companion" element={<ProtectedRoute><CompanionPage /></ProtectedRoute>} />
 
           {/* Protected routes */}
           <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route index element={<Navigate to="/dashboard" />} />
-            <Route path="dashboard" element={<DashboardPage />} />
             <Route path="medications" element={<MedicationsPage />} />
             <Route path="companion" element={<CompanionPage />} />
             <Route path="missions" element={<MissionsPage />} />
