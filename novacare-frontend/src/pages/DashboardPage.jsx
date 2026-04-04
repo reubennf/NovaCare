@@ -1,164 +1,230 @@
 import { useState, useEffect } from 'react'
-import { useAuth } from '../context/AuthContext'
-import api from '../lib/api'
 import { useNavigate } from 'react-router-dom'
+import api from '../lib/api'
 
 export default function DashboardPage() {
-  const { user } = useAuth()
   const navigate = useNavigate()
   const [profile, setProfile] = useState(null)
   const [companion, setCompanion] = useState(null)
-  const [missions, setMissions] = useState([])
-  const [logs, setLogs] = useState([])
-  const [points, setPoints] = useState(0)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchDashboardData()
-  }, [])
+  const getGreeting = () => {
+    const hour = new Date().getHours()
+    if (hour < 12) return 'Good morning'
+    if (hour < 18) return 'Good afternoon'
+    return 'Good evening'
+  }
 
-  const fetchDashboardData = async () => {
-    try {
-      const [profileRes, companionRes, missionsRes, logsRes, pointsRes] = await Promise.allSettled([
-        api.get('/profiles/me'),
-        api.get('/companion/'),
-        api.get('/missions/today'),
-        api.get('/medications/logs/today'),
-        api.get('/missions/points'),
-      ])
+  const getTime = () => {
+    return new Date().toLocaleTimeString('en-SG', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    })
+  }
 
-      if (profileRes.status === 'fulfilled') setProfile(profileRes.value.data)
-      if (companionRes.status === 'fulfilled') setCompanion(companionRes.value.data)
-      if (missionsRes.status === 'fulfilled') setMissions(missionsRes.value.data)
-      if (logsRes.status === 'fulfilled') setLogs(logsRes.value.data)
-      if (pointsRes.status === 'fulfilled') setPoints(pointsRes.value.data.total_points)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoading(false)
+  const getMoodLabel = (mood) => {
+    switch (mood) {
+      case 'happy': return 'happy'
+      case 'concerned': return 'a little concerned'
+      case 'sleepy': return 'sleepy'
+      default: return 'happy'
     }
   }
 
-  const completedMissions = missions.filter(m => m.status === 'completed').length
-  const takenMeds = logs.filter(l => l.status === 'taken').length
-  const pendingMeds = logs.filter(l => l.status === 'pending').length
+  const getPetImage = (species) => {
+    switch (species) {
+      case 'dog': return '/sushi.png'
+      case 'cat': return '/CatWelcome.png'
+      case 'chick': return '/sushi.png'
+      default: return '/sushi.png'
+    }
+  }
 
-  const petEmoji = companion?.species === 'cat' ? '🐱' : companion?.species === 'chick' ? '🐣' : '🐶'
-  const moodColor = companion?.mood_state === 'happy' ? 'text-green-500' : companion?.mood_state === 'concerned' ? 'text-amber-500' : 'text-blue-400'
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [profileRes, companionRes] = await Promise.allSettled([
+          api.get('/profiles/me'),
+          api.get('/companion/'),
+        ])
+        if (profileRes.status === 'fulfilled') setProfile(profileRes.value.data)
+        if (companionRes.status === 'fulfilled') setCompanion(companionRes.value.data)
+      } catch (err) {
+        console.error(err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
+
+  const userName = profile?.preferred_name || profile?.full_name || 'there'
+  const companionName = companion?.name || 'Sushi'
+  const mood = getMoodLabel(companion?.mood_state)
 
   if (loading) return (
-    <div className="flex items-center justify-center h-64">
-      <div className="text-gray-400 text-sm">Loading...</div>
+    <div style={{
+      width: 390,
+      height: 844,
+      margin: '0 auto',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontFamily: 'Inter'
+    }}>
+      <p style={{ color: '#aaa' }}>Loading...</p>
     </div>
   )
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-800">
-          Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}, {profile?.preferred_name || 'there'} 👋
-        </h1>
-        <p className="text-gray-400 text-sm mt-1">{new Date().toLocaleDateString('en-SG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+    <div style={{
+      width: 390,
+      height: 844,
+      margin: '0 auto',
+      background: 'white',
+      fontFamily: 'Inter, sans-serif',
+      position: 'relative',
+      overflow: 'hidden'
+    }}>
+
+      {/* NovaCare logo */}
+      <div style={{ left: 160, top: 34, position: 'absolute' }}>
+        <span style={{ color: 'black', fontSize: 20, fontWeight: 700 }}>Nova</span>
+        <span style={{ color: '#20A090', fontSize: 20, fontWeight: 700 }}>Care</span>
       </div>
 
-      {/* Stats row */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-white rounded-2xl p-4 border border-gray-100">
-          <p className="text-xs text-gray-400 mb-1">Points</p>
-          <p className="text-2xl font-bold text-purple-600">{points}</p>
-        </div>
-        <div className="bg-white rounded-2xl p-4 border border-gray-100">
-          <p className="text-xs text-gray-400 mb-1">Missions today</p>
-          <p className="text-2xl font-bold text-gray-800">{completedMissions}/{missions.length}</p>
-        </div>
-        <div className="bg-white rounded-2xl p-4 border border-gray-100">
-          <p className="text-xs text-gray-400 mb-1">Meds taken</p>
-          <p className="text-2xl font-bold text-gray-800">{takenMeds}/{takenMeds + pendingMeds}</p>
-        </div>
+      {/* Greeting */}
+      <div style={{ left: 54, top: 109, position: 'absolute' }}>
+        <span style={{ color: 'black', fontSize: 30, fontWeight: 400 }}>
+          {getGreeting()},{' '}
+        </span>
+        <span style={{ color: 'black', fontSize: 30, fontWeight: 700 }}>
+          {userName}
+        </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        {/* Pet companion card */}
-        {companion ? (
-          <div
-            className="bg-white rounded-2xl p-6 border border-gray-100 cursor-pointer hover:border-purple-200 transition-colors"
-            onClick={() => navigate('/companion')}
-          >
-            <div className="text-center">
-              <div className="text-6xl mb-3">{petEmoji}</div>
-              <h2 className="font-bold text-gray-800 text-lg">{companion.name}</h2>
-              <p className={`text-sm ${moodColor} font-medium capitalize`}>{companion.mood_state}</p>
-              <div className="mt-3 space-y-2">
-                <div>
-                  <div className="flex justify-between text-xs text-gray-400 mb-1">
-                    <span>Energy</span><span>{companion.energy}%</span>
-                  </div>
-                  <div className="h-1.5 bg-gray-100 rounded-full">
-                    <div className="h-1.5 bg-green-400 rounded-full" style={{ width: `${companion.energy}%` }}/>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-xs text-gray-400 mb-1">
-                    <span>Affection</span><span>{companion.affection}%</span>
-                  </div>
-                  <div className="h-1.5 bg-gray-100 rounded-full">
-                    <div className="h-1.5 bg-pink-400 rounded-full" style={{ width: `${companion.affection}%` }}/>
-                  </div>
-                </div>
-              </div>
-              <p className="text-xs text-gray-400 mt-3">Level {companion.level} · {companion.xp} XP</p>
-            </div>
-          </div>
-        ) : (
-          <div
-            className="bg-purple-50 rounded-2xl p-6 border border-purple-100 cursor-pointer flex flex-col items-center justify-center"
-            onClick={() => navigate('/companion')}
-          >
-            <div className="text-4xl mb-2">🐾</div>
-            <p className="text-purple-600 font-medium text-sm">Create your companion</p>
-          </div>
-        )}
-
-        {/* Today's missions */}
-        <div className="bg-white rounded-2xl p-6 border border-gray-100">
-          <h2 className="font-bold text-gray-800 mb-3">Today's missions</h2>
-          {missions.length === 0 ? (
-            <p className="text-gray-400 text-sm">No missions yet</p>
-          ) : (
-            <div className="space-y-2">
-              {missions.slice(0, 4).map(mission => (
-                <div key={mission.id} className="flex items-center gap-2">
-                  <div className={`w-4 h-4 rounded-full flex-shrink-0 ${mission.status === 'completed' ? 'bg-green-400' : 'bg-gray-100'}`}/>
-                  <span className={`text-sm ${mission.status === 'completed' ? 'text-gray-400 line-through' : 'text-gray-700'}`}>
-                    {mission.generated_reason || 'Daily mission'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-          <button
-            onClick={() => navigate('/missions')}
-            className="mt-4 text-xs text-purple-500 hover:text-purple-700"
-          >
-            View all missions →
-          </button>
-        </div>
+      {/* Time */}
+      <div style={{
+        left: 150,
+        top: 155,
+        position: 'absolute',
+        color: 'rgba(0,0,0,0.67)',
+        fontSize: 16,
+        fontWeight: 400
+      }}>
+        {getTime()} | Sunny
       </div>
 
-      {/* Medication reminders */}
-      {pendingMeds > 0 && (
-        <div
-          className="bg-amber-50 border border-amber-100 rounded-2xl p-4 flex items-center gap-3 cursor-pointer"
-          onClick={() => navigate('/medications')}
-        >
-          <span className="text-2xl">💊</span>
-          <div>
-            <p className="font-medium text-amber-800 text-sm">You have {pendingMeds} medication{pendingMeds > 1 ? 's' : ''} pending today</p>
-            <p className="text-amber-600 text-xs mt-0.5">Tap to view and mark as taken</p>
-          </div>
-        </div>
-      )}
+      {/* Pet shadow */}
+      <div style={{
+        width: 200,
+        height: 30,
+        left: 95,
+        top: 445,
+        position: 'absolute',
+        background: 'rgba(0,0,0,0.10)',
+        borderRadius: 9999,
+        filter: 'blur(12px)'
+        }} />
+      {/* Pet image */}
+        <img
+        src={getPetImage(companion?.species)}
+        alt="pet"
+        style={{
+            width: 280,
+            height: 280,
+            left: 55,
+            top: 180,
+            position: 'absolute',
+            objectFit: 'contain'
+        }}
+        />
+
+      {/* Pet mood */}
+      <div style={{ left: 145, top: 510, position: 'absolute' }}>
+        <span style={{
+          color: 'rgba(0,0,0,0.67)',
+          fontSize: 16,
+          fontWeight: 700
+        }}>
+          {companionName}
+        </span>
+        <span style={{
+          color: 'rgba(0,0,0,0.67)',
+          fontSize: 16,
+          fontWeight: 400
+        }}>
+          {' '}is {mood}
+        </span>
+      </div>
+
+      {/* Chat button */}
+      <div
+        onClick={() => navigate('/companion')}
+        style={{
+          width: 273,
+          height: 55,
+          left: 65,
+          top: 572,
+          position: 'absolute',
+          background: 'white',
+          boxShadow: '0px 4px 9px rgba(0,0,0,0.16)',
+          borderRadius: 30,
+          border: '1px solid rgba(0,0,0,0.09)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer'
+        }}
+      >
+        <span style={{ color: 'black', fontSize: 20, fontWeight: 400 }}>Chat</span>
+      </div>
+
+      {/* Today's Missions button */}
+      <div
+        onClick={() => navigate('/missions')}
+        style={{
+          width: 273,
+          height: 55,
+          left: 64,
+          top: 645,
+          position: 'absolute',
+          background: 'white',
+          boxShadow: '0px 4px 9px rgba(0,0,0,0.16)',
+          borderRadius: 30,
+          border: '1px solid rgba(0,0,0,0.09)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer'
+        }}
+      >
+        <span style={{ color: 'black', fontSize: 20, fontWeight: 400 }}>Today's Missions</span>
+      </div>
+
+      {/* Reminders button */}
+      <div
+        onClick={() => navigate('/medications')}
+        style={{
+          width: 273,
+          height: 55,
+          left: 64,
+          top: 718,
+          position: 'absolute',
+          background: 'white',
+          boxShadow: '0px 4px 9px rgba(0,0,0,0.16)',
+          borderRadius: 30,
+          border: '1px solid rgba(0,0,0,0.09)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer'
+        }}
+      >
+        <span style={{ color: 'black', fontSize: 20, fontWeight: 400 }}>Reminders</span>
+      </div>
+
     </div>
   )
 }
