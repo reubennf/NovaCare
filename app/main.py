@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.core.config import settings
-from app.api.routes import profiles, medications, companion, missions, caregiver, social, notifications
+from app.api.routes import profiles, medications, companion, missions, caregiver, social, notifications, onboarding
 from app.workers.scheduler import start_scheduler, stop_scheduler
 import logging
 
@@ -51,6 +51,7 @@ app.include_router(missions.router)
 app.include_router(caregiver.router)
 app.include_router(social.router)
 app.include_router(notifications.router)
+app.include_router(onboarding.router)
 
 @app.get("/health")
 def health_check():

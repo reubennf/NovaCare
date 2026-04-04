@@ -1,0 +1,84 @@
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { AuthProvider, useAuth } from './context/AuthContext'
+import { useState, useEffect } from 'react'
+import api from './lib/api'
+
+import WelcomePage from './pages/WelcomePage'
+import LoginPage from './pages/LoginPage'
+import SignupPage from './pages/SignupPage'
+import OnboardingPage from './pages/OnboardingPage'
+import DashboardPage from './pages/DashboardPage'
+import MedicationsPage from './pages/MedicationsPage'
+import CompanionPage from './pages/CompanionPage'
+import MissionsPage from './pages/MissionsPage'
+import CaregiverPage from './pages/CaregiverPage'
+import EventsPage from './pages/EventsPage'
+import ProfilePage from './pages/ProfilePage'
+import Layout from './components/Layout'
+
+function ProtectedRoute({ children }) {
+  const { user, loading } = useAuth()
+  const [onboardingStatus, setOnboardingStatus] = useState(null)
+  const [checking, setChecking] = useState(true)
+
+  useEffect(() => {
+    if (user) {
+      api.get('/onboarding/status')
+        .then(res => setOnboardingStatus(res.data.onboarding_status))
+        .catch(() => setOnboardingStatus('not_started'))
+        .finally(() => setChecking(false))
+    } else {
+      setChecking(false)
+    }
+  }, [user])
+
+  if (loading || checking) return (
+    <div className="flex items-center justify-center h-screen">Loading...</div>
+  )
+  if (!user) return <Navigate to="/welcome" />
+
+  // Skip onboarding check if already on onboarding page
+  if (onboardingStatus !== 'completed' && window.location.pathname !== '/onboarding') {
+    return <Navigate to="/onboarding" />
+  }
+
+  return children
+}
+
+function PublicRoute({ children }) {
+  const { user, loading } = useAuth()
+  if (loading) return <div className="flex items-center justify-center h-screen">Loading...</div>
+  if (user) return <Navigate to="/dashboard" />
+  return children
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* Public routes */}
+          <Route path="/welcome" element={<PublicRoute><WelcomePage /></PublicRoute>} />
+          <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+          <Route path="/signup" element={<PublicRoute><SignupPage /></PublicRoute>} />
+          <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
+
+          {/* Protected routes */}
+          <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+            <Route index element={<Navigate to="/dashboard" />} />
+            <Route path="dashboard" element={<DashboardPage />} />
+            <Route path="medications" element={<MedicationsPage />} />
+            <Route path="companion" element={<CompanionPage />} />
+            <Route path="missions" element={<MissionsPage />} />
+            <Route path="caregiver" element={<CaregiverPage />} />
+            <Route path="events" element={<EventsPage />} />
+            <Route path="profile" element={<ProfilePage />} />
+          </Route>
+
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/welcome" />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
+  )
+}

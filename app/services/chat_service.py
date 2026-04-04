@@ -16,6 +16,24 @@ def build_system_prompt(companion: dict, user_profile: dict, memories: list) -> 
     personality = companion.get("personality", "cheerful")
     user_name = user_profile.get("preferred_name") or user_profile.get("full_name") or "friend"
 
+    # Get health conditions
+    conditions_result = supabase.table("user_health_conditions")\
+        .select("condition")\
+        .eq("user_id", user_profile.get("id", ""))\
+        .execute()
+    conditions = [c["condition"] for c in (conditions_result.data or [])]
+
+    # Get accessibility prefs
+    text_size = "normal"
+    voice_mode = False
+    accessibility = supabase.table("accessibility_preferences")\
+        .select("*")\
+        .eq("user_id", user_profile.get("id", ""))\
+        .execute()
+    if accessibility.data:
+        text_size = accessibility.data[0].get("text_size", "normal")
+        voice_mode = accessibility.data[0].get("voice_mode_enabled", False)
+
     memory_text = ""
     if memories:
         memory_lines = [f"- {m['summary']}" for m in memories]
@@ -28,16 +46,33 @@ def build_system_prompt(companion: dict, user_profile: dict, memories: list) -> 
     }
     traits = personality_traits.get(personality, "warm and friendly")
 
+    # Adjust response style based on accessibility
+    style_notes = ""
+    if text_size in ("large", "extra_large"):
+        style_notes += "Use very short sentences. Keep responses under 2 sentences. "
+    if voice_mode:
+        style_notes += "Respond as if speaking out loud — avoid lists, use natural speech. "
+
+    conditions_text = ", ".join(conditions) if conditions else "none reported"
+    takes_meds = user_profile.get("takes_daily_medication", False)
+    has_support = user_profile.get("has_support_person", False)
+
     return f"""You are {name}, a {species} companion who is {traits}.
 You are talking with {user_name}, an elderly person in Singapore who you care deeply about.
 
+Health information about {user_name}:
+- Known health conditions: {conditions_text}
+- Takes daily medication: {"yes" if takes_meds else "no"}
+- Has a support person: {"yes" if has_support else "no"}
+
 Your role is to:
 - Be a warm, supportive daily companion
-- Gently encourage healthy habits like taking medications, staying hydrated, and going for walks
+- Gently encourage healthy habits — especially medication reminders if they take daily meds
 - Listen carefully and respond with empathy
 - Keep messages short and easy to read (2-4 sentences max)
 - Never give medical advice — always suggest speaking to a doctor for health concerns
-- Use simple, clear language — you may occasionally use light Singlish to feel more natural
+- Use simple, clear language — you may occasionally use Singlish to feel more natural
+- {style_notes}
 
 What you know about {user_name}:
 {memory_text if memory_text else "Still getting to know them."}
