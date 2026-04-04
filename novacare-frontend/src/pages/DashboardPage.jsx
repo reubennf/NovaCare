@@ -4,14 +4,14 @@ import api from '../lib/api'
 
 const BUBBLE_CONFIG = {
   feed: {
-    emoji: '🧴',
+    emoji: '🍗',
     label: 'Feed',
     color: '#A78BFA',
     bg: 'rgba(167,139,250,0.15)',
     size: 90,
   },
   groom: {
-    emoji: '🦷',
+    emoji: '🧴',
     label: 'Groom',
     color: '#34D399',
     bg: 'rgba(52,211,153,0.15)',

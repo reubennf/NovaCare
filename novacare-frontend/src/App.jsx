@@ -11,6 +11,8 @@ import DashboardPage from './pages/DashboardPage'
 import MedicationsPage from './pages/MedicationsPage'
 import CompanionPage from './pages/CompanionPage'
 import MissionsPage from './pages/MissionsPage'
+import RewardPage from './pages/RewardPage'
+import RanksPage from './pages/RanksPage'
 import CaregiverPage from './pages/CaregiverPage'
 import SocialPage from './pages/SocialPage'
 import EventsPage from './pages/EventsPage'
@@ -68,14 +70,15 @@ export default function App() {
           <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
           <Route path="/companion" element={<ProtectedRoute><CompanionPage /></ProtectedRoute>} />
+          <Route path="/missions" element={<ProtectedRoute><MissionsPage /></ProtectedRoute>} />
           <Route path="/social" element={<ProtectedRoute><SocialPage /></ProtectedRoute>} />
           <Route path="/events" element={<ProtectedRoute><EventsPage /></ProtectedRoute>} />
+          <Route path="/reward" element={<ProtectedRoute><RewardPage /></ProtectedRoute>} />
+          <Route path="/ranks" element={<ProtectedRoute><RanksPage /></ProtectedRoute>} />
           {/* Protected routes */}
           <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route index element={<Navigate to="/dashboard" />} />
             <Route path="medications" element={<MedicationsPage />} />
-            <Route path="companion" element={<CompanionPage />} />
-            <Route path="missions" element={<MissionsPage />} />
             <Route path="caregiver" element={<CaregiverPage />} />
             <Route path="events" element={<EventsPage />} />
             <Route path="profile" element={<ProfilePage />} />

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
+from pydantic import BaseModel
 from app.schemas.missions import UserMissionResponse, PointsResponse, ItemResponse, PurchaseRequest, StreakResponse
 from app.services.mission_service import (
     assign_daily_missions, complete_mission,
@@ -115,3 +116,72 @@ def get_inventory(user_id: str = Depends(get_current_user_id)):
         .eq("user_id", user_id)\
         .execute()
     return result.data
+
+class BonusPoints(BaseModel):
+    points: int
+
+@router.post("/award-bonus")
+def award_bonus_points(payload: BonusPoints, user_id: str = Depends(get_current_user_id)):
+    award_points(
+        user_id=user_id,
+        points=payload.points,
+        source_type="mission",
+        note="Mission completion bonus reward"
+    )
+    return {"message": f"Awarded {payload.points} bonus points"}
+
+@router.get("/leaderboard")
+def get_leaderboard(user_id: str = Depends(get_current_user_id)):
+    """Get points leaderboard for all users."""
+    # Get all profiles
+    profiles = supabase.table("profiles")\
+        .select("id, preferred_name, full_name, avatar_url")\
+        .execute()
+
+    if not profiles.data:
+        return {"leaderboard": [], "user_rank": 0, "league": "Bronze"}
+
+    # Get points for each user
+    leaderboard = []
+    for profile in profiles.data:
+        pid = profile["id"]
+        points_res = supabase.table("points_ledger")\
+            .select("points_delta")\
+            .eq("user_id", pid)\
+            .execute()
+        total = sum(r["points_delta"] for r in (points_res.data or []))
+        if total > 0:
+            leaderboard.append({
+                "user_id": pid,
+                "name": profile.get("preferred_name") or profile.get("full_name") or "User",
+                "avatar_url": profile.get("avatar_url"),
+                "points": total
+            })
+
+    # Sort by points
+    leaderboard.sort(key=lambda x: x["points"], reverse=True)
+
+    # Add ranks
+    for i, entry in enumerate(leaderboard):
+        entry["rank"] = i + 1
+
+    # Find current user rank
+    user_rank = next((e["rank"] for e in leaderboard if e["user_id"] == user_id), 0)
+    user_points = next((e["points"] for e in leaderboard if e["user_id"] == user_id), 0)
+
+    # Determine league based on points
+    if user_points >= 1000:
+        league = "Ruby"
+    elif user_points >= 500:
+        league = "Gold"
+    elif user_points >= 200:
+        league = "Silver"
+    else:
+        league = "Bronze"
+
+    return {
+        "leaderboard": leaderboard,
+        "user_rank": user_rank,
+        "league": league,
+        "user_points": user_points
+    }
