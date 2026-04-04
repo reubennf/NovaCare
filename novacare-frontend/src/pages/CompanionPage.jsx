@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import api from '../lib/api'
 import { useNavigate, Link } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
+import PetWithAccessories from '../components/PetWithAccessories'
 import {
   getChatMessages,
   getChatThreadId,
@@ -368,17 +369,9 @@ export default function CompanionPage() {
         height: 230,
         marginBottom: 8
       }}>
-        <img
-          src={getPetImage(companion?.species)}
-          alt="pet"
-          style={{
-            width: 400,
-            height: 450,
-            top: 80,
-            objectFit: 'contain',
-            position: 'relative',
-            zIndex: 1
-          }}
+        <PetWithAccessories
+          species={companion?.species}
+          size={450}
         />
         {/* Shadow */}
         <div style={{

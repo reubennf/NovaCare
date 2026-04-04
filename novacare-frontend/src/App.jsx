@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { useState, useEffect } from 'react'
+import { EquipmentProvider } from './context/EquipmentContext'
 import api from './lib/api'
 
 import WelcomePage from './pages/WelcomePage'
@@ -20,6 +21,8 @@ import SocialPage from './pages/SocialPage'
 import EventsPage from './pages/EventsPage'
 import ProfilePage from './pages/ProfilePage'
 import Layout from './components/Layout'
+import DressUpPage from './pages/DressUpPage'
+
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
@@ -63,36 +66,40 @@ function PublicRoute({ children }) {
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* Public routes */}
-          <Route path="/welcome" element={<PublicRoute><WelcomePage /></PublicRoute>} />
-          <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
-          <Route path="/signup" element={<PublicRoute><SignupPage /></PublicRoute>} />
-          <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
-          <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-          <Route path="/companion" element={<ProtectedRoute><CompanionPage /></ProtectedRoute>} />
-          <Route path="/missions" element={<ProtectedRoute><MissionsPage /></ProtectedRoute>} />
-          <Route path="/social" element={<ProtectedRoute><SocialPage /></ProtectedRoute>} />
-          <Route path="/events" element={<ProtectedRoute><EventsPage /></ProtectedRoute>} />
-          <Route path="/reward" element={<ProtectedRoute><RewardPage /></ProtectedRoute>} />
-          <Route path="/ranks" element={<ProtectedRoute><RanksPage /></ProtectedRoute>} />
-          <Route path="/groom" element={<ProtectedRoute><GroomPage /></ProtectedRoute>} />
-          <Route path="/feed" element={<ProtectedRoute><FeedPage /></ProtectedRoute>} />
+      <EquipmentProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* Public routes */}
+            <Route path="/welcome" element={<PublicRoute><WelcomePage /></PublicRoute>} />
+            <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+            <Route path="/signup" element={<PublicRoute><SignupPage /></PublicRoute>} />
+            <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
+            <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+            <Route path="/companion" element={<ProtectedRoute><CompanionPage /></ProtectedRoute>} />
+            <Route path="/missions" element={<ProtectedRoute><MissionsPage /></ProtectedRoute>} />
+            <Route path="/social" element={<ProtectedRoute><SocialPage /></ProtectedRoute>} />
+            <Route path="/events" element={<ProtectedRoute><EventsPage /></ProtectedRoute>} />
+            <Route path="/reward" element={<ProtectedRoute><RewardPage /></ProtectedRoute>} />
+            <Route path="/ranks" element={<ProtectedRoute><RanksPage /></ProtectedRoute>} />
+            <Route path="/groom" element={<ProtectedRoute><GroomPage /></ProtectedRoute>} />
+            <Route path="/feed" element={<ProtectedRoute><FeedPage /></ProtectedRoute>} />
+            <Route path="/dressup" element={<ProtectedRoute><DressUpPage /></ProtectedRoute>} />
 
-          {/* Protected routes */}
-          <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-            <Route index element={<Navigate to="/dashboard" />} />
-            <Route path="medications" element={<MedicationsPage />} />
-            <Route path="caregiver" element={<CaregiverPage />} />
-            <Route path="events" element={<EventsPage />} />
-            <Route path="profile" element={<ProfilePage />} />
-          </Route>
 
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/welcome" />} />
-        </Routes>
-      </BrowserRouter>
+            {/* Protected routes */}
+            <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+              <Route index element={<Navigate to="/dashboard" />} />
+              <Route path="medications" element={<MedicationsPage />} />
+              <Route path="caregiver" element={<CaregiverPage />} />
+              <Route path="events" element={<EventsPage />} />
+              <Route path="profile" element={<ProfilePage />} />
+            </Route>
+
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/welcome" />} />
+          </Routes>
+        </BrowserRouter>
+      </EquipmentProvider>
     </AuthProvider>
   )
 }

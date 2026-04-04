@@ -376,3 +376,44 @@ def get_care_status(user_id: str = Depends(get_current_user_id)):
         "needs_care": needs_care,
         "last_care": last_care
     }
+@router.get("/equipment")
+def get_equipment(user_id: str = Depends(get_current_user_id)):
+    companion = supabase.table("companions").select("id").eq("user_id", user_id).execute()
+    if not companion.data:
+        raise HTTPException(status_code=404, detail="No companion found")
+    companion_id = companion.data[0]["id"]
+    
+    result = supabase.table("companion_equipment")\
+        .select("*")\
+        .eq("companion_id", companion_id)\
+        .execute()
+    
+    if not result.data:
+        return {"companion_id": companion_id, "hat_item_id": None, "accessory_item_id": None, "outfit_item_id": None}
+    return result.data[0]
+
+@router.post("/equipment")
+def update_equipment(payload: dict, user_id: str = Depends(get_current_user_id)):
+    from datetime import datetime
+    companion = supabase.table("companions").select("id").eq("user_id", user_id).execute()
+    if not companion.data:
+        raise HTTPException(status_code=404, detail="No companion found")
+    companion_id = companion.data[0]["id"]
+
+    existing = supabase.table("companion_equipment")\
+        .select("*")\
+        .eq("companion_id", companion_id)\
+        .execute()
+
+    payload["companion_id"] = companion_id
+    payload["updated_at"] = datetime.utcnow().isoformat()
+
+    if existing.data:
+        supabase.table("companion_equipment")\
+            .update(payload)\
+            .eq("companion_id", companion_id)\
+            .execute()
+    else:
+        supabase.table("companion_equipment").insert(payload).execute()
+
+    return {"message": "Equipment updated"}

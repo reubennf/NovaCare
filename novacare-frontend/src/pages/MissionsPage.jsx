@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../lib/api'
+import PetWithAccessories from '../components/PetWithAccessories'
 
 const categoryEmoji = {
   walk: '🚶',
@@ -252,20 +253,10 @@ export default function MissionsPage() {
           </div>
 
           {/* Pet image - absolutely positioned to right, can overflow bottom */}
-          <img
-            src={getPetImage(companion?.species)}
-            alt="pet"
-            style={{
-              position: 'absolute',
-              right: -10,
-              bottom: -30,
-              width: 160,
-              height: 180,
-              objectFit: 'contain'
-            }}
-            onError={e => { e.target.style.display = 'none' }}
+          <PetWithAccessories
+            species={companion?.species}
+            size={180}
           />
-        </div>
 
         {/* Mission list - max 3 */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -338,5 +329,6 @@ export default function MissionsPage() {
       </div>
 
     </div>
+  </div>
   )
 }

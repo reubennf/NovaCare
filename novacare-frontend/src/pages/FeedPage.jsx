@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../lib/api'
+import PetWithAccessories from '../components/PetWithAccessories'
 
 const FOOD_ITEMS = [
   { id: 'bone', emoji: '🦴', name: 'Bone', cost: 10, energy: 10 },

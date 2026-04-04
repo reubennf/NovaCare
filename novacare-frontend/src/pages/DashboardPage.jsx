@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../lib/api'
+import PetWithAccessories from '../components/PetWithAccessories'
 
 const BUBBLE_CONFIG = {
   feed: {
@@ -109,10 +110,10 @@ export default function DashboardPage() {
   const mood = getMoodLabel(companion?.mood_state)
 
   // Which bubbles to show
-//   const activeBubbles = Object.entries(BUBBLE_CONFIG).filter(
-//     ([type]) => careStatus?.needs_care?.[type]
-//   )
-  const activeBubbles = Object.entries(BUBBLE_CONFIG)
+  const activeBubbles = Object.entries(BUBBLE_CONFIG).filter(
+    ([type]) => careStatus?.needs_care?.[type]
+  )
+//   const activeBubbles = Object.entries(BUBBLE_CONFIG)
 
   if (loading) return (
     <div style={{
@@ -224,17 +225,9 @@ export default function DashboardPage() {
         filter: 'blur(12px)'
         }} />
       {/* Pet image */}
-        <img
-        src={getPetImage(companion?.species)}
-        alt="pet"
-        style={{
-            width: 600,
-            height: 600,
-            left: 5,
-            top: 20,
-            position: 'absolute',
-            objectFit: 'contain'
-        }}
+        <PetWithAccessories
+        species={companion?.species}
+        size={600}
         />
 
       {/* Pet mood */}
@@ -391,6 +384,25 @@ export default function DashboardPage() {
             <span style={{ fontSize: 16 }}>📅</span>
             <span style={{ color: 'black', fontSize: 14, fontWeight: 400 }}>Events</span>
           </div>
+          {/* Dress up */}
+            <div
+            onClick={() => navigate('/dressup')}
+            style={{
+                height: 52,
+                background: 'white',
+                boxShadow: '0px 4px 9px rgba(0,0,0,0.12)',
+                borderRadius: 30,
+                border: '1px solid rgba(0,0,0,0.07)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                gap: 8
+            }}
+            >
+            <span style={{ fontSize: 18 }}>👗</span>
+            <span style={{ color: 'black', fontSize: 14, fontWeight: 400 }}>Dress up</span>
+            </div>
         </div>
 
       </div>
