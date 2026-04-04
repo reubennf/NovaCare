@@ -267,7 +267,7 @@ export default function FeedPage() {
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        height: 220,
+        height: 280,
         flexShrink: 0
       }}>
 
@@ -299,8 +299,8 @@ export default function FeedPage() {
           src={getPetImage(companion?.species)}
           alt="pet"
           style={{
-            width: 900,
-            height: 900,
+            width: 700,
+            height: 700,
             objectFit: 'contain',
             animation: feedAnimation
               ? 'pet-bounce 0.8s ease'

@@ -72,8 +72,8 @@ export default function DashboardPage() {
       const [profileRes, companionRes, moodRes, careRes] = await Promise.allSettled([
         api.get('/profiles/me'),
         api.get('/companion/'),
-        api.get('/companion/mood-summary'),
-        api.get('/companion/care/status'),
+        // api.get('/companion/mood-summary'),
+        // api.get('/companion/care/status'),
       ])
       if (profileRes.status === 'fulfilled') setProfile(profileRes.value.data)
       if (companionRes.status === 'fulfilled') setCompanion(companionRes.value.data)
