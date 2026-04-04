@@ -10,6 +10,7 @@ import OnboardingPage from './pages/OnboardingPage'
 import DashboardPage from './pages/DashboardPage'
 import MedicationsPage from './pages/MedicationsPage'
 import GroomPage from './pages/GroomPage'
+import FeedPage from './pages/FeedPage'
 import CompanionPage from './pages/CompanionPage'
 import MissionsPage from './pages/MissionsPage'
 import RewardPage from './pages/RewardPage'
@@ -77,6 +78,7 @@ export default function App() {
           <Route path="/reward" element={<ProtectedRoute><RewardPage /></ProtectedRoute>} />
           <Route path="/ranks" element={<ProtectedRoute><RanksPage /></ProtectedRoute>} />
           <Route path="/groom" element={<ProtectedRoute><GroomPage /></ProtectedRoute>} />
+          <Route path="/feed" element={<ProtectedRoute><FeedPage /></ProtectedRoute>} />
 
           {/* Protected routes */}
           <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>

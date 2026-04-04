@@ -9,6 +9,7 @@ const BUBBLE_CONFIG = {
     color: '#A78BFA',
     bg: 'rgba(167,139,250,0.15)',
     size: 90,
+    route: '/feed'
   },
   groom: {
     emoji: '🧴',
@@ -108,9 +109,10 @@ export default function DashboardPage() {
   const mood = getMoodLabel(companion?.mood_state)
 
   // Which bubbles to show
-  const activeBubbles = Object.entries(BUBBLE_CONFIG).filter(
-    ([type]) => careStatus?.needs_care?.[type]
-  )
+//   const activeBubbles = Object.entries(BUBBLE_CONFIG).filter(
+//     ([type]) => careStatus?.needs_care?.[type]
+//   )
+  const activeBubbles = Object.entries(BUBBLE_CONFIG)
 
   if (loading) return (
     <div style={{
@@ -168,11 +170,13 @@ export default function DashboardPage() {
           <div
             key={type}
             onClick={() => {
-                if (type === 'groom') {
+            if (type === 'groom') {
                 navigate('/groom')
-                } else {
+            } else if (type === 'feed') {
+                navigate('/feed')
+            } else {
                 handleCare(type)
-                }
+            }
             }}
             style={{
                 position: 'absolute',
