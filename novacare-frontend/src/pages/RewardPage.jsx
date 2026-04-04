@@ -101,7 +101,7 @@ export default function RewardPage() {
 
         <div style={{ marginBottom: 24 }}>
             <span style={{ fontSize: 18, fontWeight: 700, color: 'black' }}>Nova</span>
-            <span style={{ fontSize: 18, fontWeight: 700, color: '#20A090' }}>Pet</span>
+            <span style={{ fontSize: 18, fontWeight: 700, color: '#20A090' }}>Care</span>
         </div>
 
         <h1 style={{

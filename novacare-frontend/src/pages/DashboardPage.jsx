@@ -16,6 +16,7 @@ const BUBBLE_CONFIG = {
     color: '#34D399',
     bg: 'rgba(52,211,153,0.15)',
     size: 72,
+    route: '/groom'
   },
 }
 
@@ -166,38 +167,44 @@ export default function DashboardPage() {
         return (
           <div
             key={type}
-            onClick={() => handleCare(type)}
-            style={{
-              position: 'absolute',
-              ...pos,
-              width: config.size,
-              height: config.size,
-              borderRadius: '50%',
-              background: config.bg,
-              border: `2px solid ${config.color}33`,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              zIndex: 5,
-              boxShadow: `0 4px 20px ${config.color}33`,
-              animation: 'float 3s ease-in-out infinite',
-              animationDelay: `${index * 0.5}s`,
-              opacity: caring === type ? 0.6 : 1,
-              transition: 'opacity 0.2s'
+            onClick={() => {
+                if (type === 'groom') {
+                navigate('/groom')
+                } else {
+                handleCare(type)
+                }
             }}
-          >
+            style={{
+                position: 'absolute',
+                ...pos,
+                width: config.size,
+                height: config.size,
+                borderRadius: '50%',
+                background: config.bg,
+                border: `2px solid ${config.color}33`,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                zIndex: 5,
+                boxShadow: `0 4px 20px ${config.color}33`,
+                animation: 'float 3s ease-in-out infinite',
+                animationDelay: `${index * 0.5}s`,
+                opacity: caring === type ? 0.6 : 1,
+                transition: 'opacity 0.2s'
+            }}
+            >
             <span style={{ fontSize: config.size * 0.35 }}>{config.emoji}</span>
             <span style={{
-              fontSize: 10,
-              color: config.color,
-              fontWeight: 600,
-              marginTop: 2
+                fontSize: 10,
+                color: config.color,
+                fontWeight: 600,
+                marginTop: 2
             }}>
-              {caring === type ? '...' : config.label}
+                {caring === type ? '...' : config.label}
             </span>
-          </div>
+            </div>
         )
       })}
 

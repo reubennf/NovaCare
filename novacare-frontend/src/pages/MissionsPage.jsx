@@ -135,23 +135,24 @@ export default function MissionsPage() {
             <span style={{ fontSize: 18, fontWeight: 700, color: 'black' }}>Nova</span>
             <span style={{ fontSize: 18, fontWeight: 700, color: '#20A090' }}>Care</span>
           </div>
-        </div>
-        {/* Ranks button */}
-        <div
-          onClick={() => navigate('/ranks')}
-          style={{
-            position: 'absolute',
-            right: 0,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4,
-            color: '#20A090',
-            fontSize: 13,
-            fontWeight: 600
-          }}
-        >
-          🏆 Ranks
+        
+          {/* Ranks button */}
+          <div
+            onClick={() => navigate('/ranks')}
+            style={{
+              position: 'absolute',
+              right: 0,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              color: '#20A090',
+              fontSize: 13,
+              fontWeight: 600
+            }}
+          >
+            🏆 Ranks
+          </div>
         </div>
         {/* Greeting */}
         <h1 style={{
