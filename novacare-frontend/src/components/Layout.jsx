@@ -1,5 +1,7 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { clearChatStore } from '../lib/chatStore'
+
 
 const navItems = [
   { path: '/dashboard', label: 'Home', emoji: '🏠' },
@@ -16,9 +18,10 @@ export default function Layout() {
   const navigate = useNavigate()
 
   const handleSignOut = async () => {
+    clearChatStore()
     await signOut()
     navigate('/login')
-  }
+    }
 
   return (
     <div className="flex h-screen bg-gray-50">

@@ -215,3 +215,78 @@ Rules:
 
     # Fallback suggestions
     return {"suggestions": ["Tell me more", "I feel better", "What should I do?"]}
+
+@router.get("/greeting")
+def get_greeting(user_id: str = Depends(get_current_user_id)):
+    """Generate a personalised greeting based on user's activity today."""
+    from app.core.config import settings
+    from openai import OpenAI
+    from datetime import datetime, date
+
+    client = OpenAI(
+        api_key=settings.SEA_LION_API_KEY,
+        base_url="https://api.sea-lion.ai/v1"
+    )
+
+    # Get today's data
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0).isoformat()
+    today_str = str(date.today())
+
+    profile = supabase.table("profiles").select("preferred_name").eq("id", user_id).execute()
+    name = profile.data[0].get("preferred_name", "friend") if profile.data else "friend"
+
+    companion = supabase.table("companions").select("name, mood_state, level").eq("user_id", user_id).execute()
+    companion_data = companion.data[0] if companion.data else {}
+    pet_name = companion_data.get("name", "Sushi")
+
+    missions = supabase.table("user_missions").select("status").eq("user_id", user_id).eq("scheduled_for", today_str).execute()
+    completed = len([m for m in (missions.data or []) if m["status"] == "completed"])
+    total = len(missions.data or [])
+
+    meds = supabase.table("medication_logs").select("status").eq("user_id", user_id).gte("due_at", today_start).execute()
+    taken = len([m for m in (meds.data or []) if m["status"] == "taken"])
+    pending = len([m for m in (meds.data or []) if m["status"] == "pending"])
+
+    streak = supabase.table("daily_streaks").select("current_streak").eq("user_id", user_id).execute()
+    current_streak = streak.data[0].get("current_streak", 0) if streak.data else 0
+
+    hour = datetime.utcnow().hour + 8  # SGT
+    if hour < 12:
+        time_of_day = "morning"
+    elif hour < 18:
+        time_of_day = "afternoon"
+    else:
+        time_of_day = "evening"
+
+    prompt = f"""You are {pet_name}, a warm caring pet companion for {name}, an elderly person in Singapore.
+
+Generate a SHORT greeting message (max 8 words) based on their day so far:
+- Time: {time_of_day}
+- Missions completed: {completed} out of {total}
+- Medications taken: {taken} (pending: {pending})
+- Current streak: {current_streak} days
+
+Rules:
+- Max 5 words
+- Warm and encouraging
+- If they did well: celebrate
+- If nothing done yet: gently motivate
+- Occasional light Singlish is fine
+- No punctuation at the end
+- Examples: "Great work today!", "Good morning, ready to shine?", "Wah, {current_streak} days strong lah!"
+
+Return ONLY the greeting text, nothing else."""
+
+    try:
+        response = client.chat.completions.create(
+            model="aisingapore/Gemma-SEA-LION-v4-27B-IT",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=30,
+            extra_body={"chat_template_kwargs": {"thinking_mode": "off"}}
+        )
+        greeting = response.choices[0].message.content.strip()
+        # Clean up quotes if model adds them
+        greeting = greeting.strip('"').strip("'")
+        return {"greeting": greeting}
+    except Exception:
+        return {"greeting": "Great to see you today"}

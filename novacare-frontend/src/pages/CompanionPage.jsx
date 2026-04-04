@@ -1,11 +1,20 @@
 import { useState, useEffect, useRef } from 'react'
 import api from '../lib/api'
+import ReactMarkdown from 'react-markdown'
+import {
+  getChatMessages,
+  getChatThreadId,
+  setChatMessages,
+  setChatThreadId,
+  clearChatStore
+} from '../lib/chatStore'
 
 export default function CompanionPage() {
   const [companion, setCompanion] = useState(null)
-  const [messages, setMessages] = useState([])
-  const [threadId, setThreadId] = useState(null)
+  const [messages, setMessages] = useState(() => getChatMessages())
+  const [threadId, setThreadId] = useState(() => getChatThreadId())
   const [input, setInput] = useState('')
+  const [greeting, setGreeting] = useState('Great work today!')
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [creating, setCreating] = useState(false)
@@ -20,7 +29,18 @@ export default function CompanionPage() {
       default: return '/sushi.png'
     }
   }
+  const updateMessages = (updater) => {
+    setMessages(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater
+      setChatMessages(next)
+      return next
+    })
+  }
 
+  const updateThreadId = (id) => {
+    setThreadId(id)
+    setChatThreadId(id)
+  }
   const getTime = () => {
     return new Date().toLocaleTimeString('en-SG', {
       hour: '2-digit',
@@ -41,6 +61,15 @@ export default function CompanionPage() {
     try {
       const res = await api.get('/companion/')
       setCompanion(res.data)
+
+      // Fetch AI greeting
+      try {
+        const greetingRes = await api.get('/companion/greeting')
+        setGreeting(greetingRes.data.greeting)
+      } catch (e) {
+        setGreeting('Great to see you today')
+      }
+
     } catch (err) {
       if (err.response?.status === 404) setCreating(true)
     } finally {
@@ -64,12 +93,12 @@ export default function CompanionPage() {
     setInput('')
     setSuggestions([])
     const time = getTime()
-    setMessages(prev => [...prev, { role: 'user', content: message, time }])
+    updateMessages(prev => [...prev, { role: 'user', content: message, time }])
     setSending(true)
 
     try {
-      const token = (await import('../lib/supabase')).supabase.auth.getSession()
-      const session = (await token).data.session
+      const { supabase } = await import('../lib/supabase')
+      const { data: { session } } = await supabase.auth.getSession()
       const authToken = session?.access_token
 
       const response = await fetch(
@@ -91,10 +120,9 @@ export default function CompanionPage() {
       const decoder = new TextDecoder()
       let currentReply = ''
       let newThreadId = threadId
-
-      // Add empty assistant message to start streaming into
       const streamingMsgId = Date.now()
-      setMessages(prev => [...prev, {
+
+      updateMessages(prev => [...prev, {
         role: 'assistant',
         content: '',
         time: getTime(),
@@ -110,44 +138,47 @@ export default function CompanionPage() {
 
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue
-          const data = JSON.parse(line.slice(6))
+          try {
+            const data = JSON.parse(line.slice(6))
 
-          if (data.type === 'meta') {
-            newThreadId = data.thread_id
-            setThreadId(data.thread_id)
-          }
-
-          if (data.type === 'token') {
-            currentReply += data.content
-            // Update the streaming message in place
-            setMessages(prev => prev.map(m =>
-              m.id === streamingMsgId
-                ? { ...m, content: currentReply }
-                : m
-            ))
-          }
-
-          if (data.type === 'done') {
-            setSending(false)
-            // Fetch suggestions
-            try {
-              const suggestRes = await api.post('/companion/chat/suggestions', {
-                message: currentReply,
-                thread_id: newThreadId
-              })
-              setSuggestions(suggestRes.data.suggestions || [])
-            } catch (e) {
-              setSuggestions(['Tell me more', 'I feel better', 'What should I do?'])
+            if (data.type === 'meta') {
+              newThreadId = data.thread_id
+              updateThreadId(data.thread_id)
             }
-            // Refresh companion
-            const companionRes = await api.get('/companion/')
-            setCompanion(companionRes.data)
+
+            if (data.type === 'token') {
+              currentReply += data.content
+              updateMessages(prev => prev.map(m =>
+                m.id === streamingMsgId
+                  ? { ...m, content: currentReply }
+                  : m
+              ))
+            }
+
+            if (data.type === 'done') {
+              setSending(false)
+              try {
+                const suggestRes = await api.post('/companion/chat/suggestions', {
+                  message: currentReply,
+                  thread_id: newThreadId
+                })
+                setSuggestions(suggestRes.data.suggestions || [])
+              } catch (e) {
+                setSuggestions(['Tell me more', 'I feel better', 'What should I do?'])
+              }
+              const companionRes = await api.get('/companion/')
+              setCompanion(companionRes.data)
+            }
+
+          } catch (e) {
+            // skip malformed chunks
           }
         }
       }
+
     } catch (err) {
       console.error(err)
-      setMessages(prev => [...prev, {
+      updateMessages(prev => [...prev, {
         role: 'assistant',
         content: 'Sorry, I had trouble responding. Try again!',
         time: getTime()
@@ -283,13 +314,35 @@ export default function CompanionPage() {
       <div style={{
         padding: '34px 24px 12px',
         textAlign: 'center',
-        flexShrink: 0
+        flexShrink: 0,
+        position: 'relative',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
       }}>
-        <span style={{ color: 'black', fontSize: 20, fontWeight: 700 }}>Nova</span>
-        <span style={{ color: '#20A090', fontSize: 20, fontWeight: 700 }}>Care</span>
-      </div>
+        {/* Back button */}
+        <div
+          onClick={() => navigate('/dashboard')}
+          style={{
+            position: 'absolute',
+            left: 24,
+            cursor: 'pointer',
+            width: 36,
+            height: 36,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M15 18L9 12L15 6" stroke="#191D30" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </div>
 
-      {/* Greeting bubble */}
+        <span style={{ color: 'black', fontSize: 20, fontWeight: 700 }}>Nova</span>
+        <span style={{ color: '#20A090', fontSize: 20, fontWeight: 700 }}>Pet</span>
+      </div>
+     {/* Greeting bubble */}
       <div style={{
         margin: '0 auto 8px',
         background: 'rgba(32,160,144,0.16)',
@@ -298,7 +351,7 @@ export default function CompanionPage() {
         flexShrink: 0
       }}>
         <span style={{ color: 'black', fontSize: 16, fontWeight: 400 }}>
-          Great work today!
+          {greeting}
         </span>
       </div>
 
@@ -376,7 +429,15 @@ export default function CompanionPage() {
               lineHeight: '1.5',
               letterSpacing: 0.12
             }}>
-              {msg.content}
+              <ReactMarkdown
+                components={{
+                  p: ({ children }) => <span>{children}</span>,
+                  strong: ({ children }) => <strong style={{ fontWeight: 700 }}>{children}</strong>,
+                  em: ({ children }) => <em>{children}</em>,
+                }}
+              >
+                {msg.content}
+              </ReactMarkdown>
             </div>
             {/* Timestamp */}
             <div style={{
@@ -391,8 +452,8 @@ export default function CompanionPage() {
           </div>
         ))}
 
-        {/* Typing indicator */}
-        {sending && (
+        {/* Typing indicator - only show before first token arrives */}
+        {sending && (messages.length === 0 || messages[messages.length - 1].role === 'user') && (
           <div style={{
             display: 'flex',
             flexDirection: 'column',
