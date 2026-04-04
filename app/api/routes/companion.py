@@ -1,292 +1,400 @@
-from fastapi import APIRouter, HTTPException, Depends
-from app.schemas.companion import CompanionCreate, CompanionResponse, ChatMessage, ChatResponse
-from app.services.chat_service import chat_with_companion, analyze_sentiment
-from app.core.db import supabase
-from app.core.auth import get_current_user_id
-from datetime import datetime
-import uuid
-from fastapi.responses import StreamingResponse
-import json
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import api from '../lib/api'
 
-router = APIRouter(prefix="/companion", tags=["companion"])
+const BUBBLE_CONFIG = {
+  feed: {
+    emoji: '🧴',
+    label: 'Feed',
+    color: '#A78BFA',
+    bg: 'rgba(167,139,250,0.15)',
+    size: 90,
+  },
+  groom: {
+    emoji: '🦷',
+    label: 'Groom',
+    color: '#34D399',
+    bg: 'rgba(52,211,153,0.15)',
+    size: 72,
+  },
+}
 
-@router.post("/", response_model=CompanionResponse)
-def create_companion(payload: CompanionCreate, user_id: str = Depends(get_current_user_id)):
-    existing = supabase.table("companions").select("*").eq("user_id", user_id).execute()
-    if existing.data:
-        raise HTTPException(status_code=400, detail="Companion already exists for this user")
-    data = payload.model_dump()
-    data["user_id"] = user_id
-    result = supabase.table("companions").insert(data).execute()
-    if not result.data:
-        raise HTTPException(status_code=400, detail="Failed to create companion")
-    return result.data[0]
+export default function DashboardPage() {
+  const navigate = useNavigate()
+  const [profile, setProfile] = useState(null)
+  const [companion, setCompanion] = useState(null)
+  const [moodSummary, setMoodSummary] = useState(null)
+  const [careStatus, setCareStatus] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [caring, setCaring] = useState(null)
 
-@router.get("/", response_model=CompanionResponse)
-def get_companion(user_id: str = Depends(get_current_user_id)):
-    result = supabase.table("companions").select("*").eq("user_id", user_id).single().execute()
-    if not result.data:
-        raise HTTPException(status_code=404, detail="No companion found. Create one first.")
-    return result.data
+  const getGreeting = () => {
+    const hour = new Date().getHours()
+    if (hour < 12) return 'Good morning'
+    if (hour < 18) return 'Good afternoon'
+    return 'Good evening'
+  }
 
-@router.post("/chat/stream")
-def chat_stream(payload: ChatMessage, user_id: str = Depends(get_current_user_id)):
-    """Streaming chat endpoint."""
-    from app.services.chat_service import build_system_prompt, get_recent_messages
-    from app.core.config import settings
-    from openai import OpenAI
-    import uuid
+  const getTime = () => {
+    return new Date().toLocaleTimeString('en-SG', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    })
+  }
 
-    client = OpenAI(
-        api_key=settings.SEA_LION_API_KEY,
-        base_url="https://api.sea-lion.ai/v1"
-    )
+  const getMoodLabel = (mood) => {
+    switch (mood) {
+      case 'happy': return 'happy'
+      case 'concerned': return 'a little concerned'
+      case 'sleepy': return 'sleepy'
+      default: return 'happy'
+    }
+  }
 
-    # Get companion and profile
-    companion_result = supabase.table("companions").select("*").eq("user_id", user_id).execute()
-    if not companion_result.data:
-        raise HTTPException(status_code=404, detail="No companion found")
-    companion = companion_result.data[0]
+  const getPetImage = (species) => {
+    switch (species) {
+      case 'dog': return '/sushi.png'
+      case 'cat': return '/CatWelcome.png'
+      case 'chick': return '/sushi.png'
+      default: return '/sushi.png'
+    }
+  }
 
-    profile_result = supabase.table("profiles").select("*").eq("id", user_id).execute()
-    user_profile = profile_result.data[0] if profile_result.data else {}
+  useEffect(() => {
+    fetchData()
+  }, [])
 
-    memories_result = supabase.table("user_memories").select("*").eq("user_id", user_id).order("importance", desc=True).limit(10).execute()
-    memories = memories_result.data or []
+  const fetchData = async () => {
+    try {
+      const [profileRes, companionRes, moodRes, careRes] = await Promise.allSettled([
+        api.get('/profiles/me'),
+        api.get('/companion/'),
+        api.get('/companion/mood-summary'),
+        api.get('/companion/care/status'),
+      ])
+      if (profileRes.status === 'fulfilled') setProfile(profileRes.value.data)
+      if (companionRes.status === 'fulfilled') setCompanion(companionRes.value.data)
+      if (moodRes.status === 'fulfilled') setMoodSummary(moodRes.value.data)
+      if (careRes.status === 'fulfilled') setCareStatus(careRes.value.data)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
-    # Get or create thread
-    thread_id = payload.thread_id
-    if not thread_id:
-        thread_result = supabase.table("conversation_threads").insert({
-            "user_id": user_id,
-            "thread_type": "companion",
-            "title": "Chat with " + companion["name"]
-        }).execute()
-        thread_id = thread_result.data[0]["id"]
+  const handleCare = async (careType) => {
+    setCaring(careType)
+    try {
+      await api.post(`/companion/care/${careType}`)
+      // Refresh data
+      const [companionRes, careRes] = await Promise.all([
+        api.get('/companion/'),
+        api.get('/companion/care/status'),
+      ])
+      setCompanion(companionRes.data)
+      setCareStatus(careRes.data)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setCaring(null)
+    }
+  }
 
-    # Save user message
-    user_msg_id = str(uuid.uuid4())
-    supabase.table("conversation_messages").insert({
-        "id": user_msg_id,
-        "thread_id": thread_id,
-        "sender_type": "user",
-        "sender_user_id": user_id,
-        "body": payload.message
-    }).execute()
+  const userName = profile?.preferred_name || profile?.full_name || 'there'
+  const companionName = companion?.name || 'Sushi'
+  const mood = getMoodLabel(companion?.mood_state)
 
-    # Build messages
-    system_prompt = build_system_prompt(companion, user_profile, memories)
-    history = get_recent_messages(thread_id)
-    if not history:
-        messages = [{"role": "user", "content": f"{system_prompt}\n\nUser message: {payload.message}"}]
-    else:
-        history[0]["content"] = f"{system_prompt}\n\nUser message: {history[0]['content']}"
-        history.append({"role": "user", "content": payload.message})
-        messages = history
+  // Which bubbles to show
+  const activeBubbles = Object.entries(BUBBLE_CONFIG).filter(
+    ([type]) => careStatus?.needs_care?.[type]
+  )
 
-    def generate():
-        full_reply = ""
-        assistant_msg_id = str(uuid.uuid4())
+  if (loading) return (
+    <div style={{
+      width: 390,
+      height: 844,
+      margin: '0 auto',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontFamily: 'Inter'
+    }}>
+      <p style={{ color: '#aaa' }}>Loading...</p>
+    </div>
+  )
 
-        # Send thread_id first so frontend knows it
-        yield f"data: {json.dumps({'type': 'meta', 'thread_id': thread_id, 'assistant_msg_id': assistant_msg_id})}\n\n"
+  return (
+    <div style={{
+      width: 390,
+      height: 844,
+      margin: '0 auto',
+      background: 'white',
+      fontFamily: 'Inter, sans-serif',
+      position: 'relative',
+      overflow: 'hidden'
+    }}>
 
-        try:
-            stream = client.chat.completions.create(
-                model="aisingapore/Gemma-SEA-LION-v4-27B-IT",
-                messages=messages,
-                max_tokens=300,
-                stream=True,
-                extra_body={"chat_template_kwargs": {"thinking_mode": "off"}}
-            )
+      {/* NovaPet logo */}
+      <div style={{ position: 'absolute', left: 0, right: 0, top: 34, textAlign: 'center' }}>
+        <span style={{ color: 'black', fontSize: 20, fontWeight: 700 }}>Nova</span>
+        <span style={{ color: '#20A090', fontSize: 20, fontWeight: 700 }}>Care</span>
+      </div>
 
-            for chunk in stream:
-                delta = chunk.choices[0].delta.content
-                if delta:
-                    full_reply += delta
-                    yield f"data: {json.dumps({'type': 'token', 'content': delta})}\n\n"
+      {/* Greeting */}
+      <div style={{ left: 24, top: 80, position: 'absolute', right: 24 }}>
+        <div>
+          <span style={{ color: 'black', fontSize: 28, fontWeight: 400 }}>{getGreeting()}, </span>
+          <span style={{ color: 'black', fontSize: 28, fontWeight: 700 }}>{userName}</span>
+        </div>
+        <div style={{ color: 'rgba(0,0,0,0.5)', fontSize: 14, marginTop: 2 }}>
+          {getTime()} | Sunny
+        </div>
+      </div>
 
-        except Exception as e:
-            yield f"data: {json.dumps({'type': 'error', 'content': 'Sorry, I had trouble responding.'})}\n\n"
-            full_reply = "Sorry, I had trouble responding."
+      {/* Pet care bubbles - floating around pet */}
+      {activeBubbles.map(([type, config], index) => {
+        const positions = [
+          { left: 20, top: 200 },
+          { right: 20, top: 180 },
+          { left: 30, top: 320 },
+          { right: 25, top: 310 },
+        ]
+        const pos = positions[index] || { left: 20, top: 200 }
 
-        # Save assistant message after streaming completes
-        supabase.table("conversation_messages").insert({
-            "id": assistant_msg_id,
-            "thread_id": thread_id,
-            "sender_type": "assistant",
-            "body": full_reply
-        }).execute()
-
-        # Update thread
-        from datetime import datetime
-        supabase.table("conversation_threads").update({
-            "last_message_at": datetime.utcnow().isoformat()
-        }).eq("id", thread_id).execute()
-
-        # Boost affection
-        new_affection = min(100, companion["affection"] + 2)
-        supabase.table("companions").update({
-            "affection": new_affection,
-            "updated_at": datetime.utcnow().isoformat()
-        }).eq("id", companion["id"]).execute()
-
-        yield f"data: {json.dumps({'type': 'done'})}\n\n"
-
-    return StreamingResponse(
-        generate(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no"
-        }
-    )
-
-@router.get("/threads")
-def get_threads(user_id: str = Depends(get_current_user_id)):
-    result = supabase.table("conversation_threads")\
-        .select("*")\
-        .eq("user_id", user_id)\
-        .order("last_message_at", desc=True)\
-        .execute()
-    return result.data
-
-@router.get("/threads/{thread_id}/messages")
-def get_messages(thread_id: str, user_id: str = Depends(get_current_user_id)):
-    thread = supabase.table("conversation_threads").select("*").eq("id", thread_id).eq("user_id", user_id).single().execute()
-    if not thread.data:
-        raise HTTPException(status_code=404, detail="Thread not found")
-    result = supabase.table("conversation_messages")\
-        .select("*")\
-        .eq("thread_id", thread_id)\
-        .order("created_at")\
-        .execute()
-    return result.data
-
-@router.post("/chat/suggestions")
-def get_suggestions(payload: ChatMessage, user_id: str = Depends(get_current_user_id)):
-    """Generate contextual quick reply suggestions based on conversation."""
-    from app.services.chat_service import get_recent_messages
-    from app.core.config import settings
-    from openai import OpenAI
-    import json
-
-    client = OpenAI(
-        api_key=settings.SEA_LION_API_KEY,
-        base_url="https://api.sea-lion.ai/v1"
-    )
-
-    history = get_recent_messages(payload.thread_id, limit=6)
-    history_text = "\n".join([
-        f"{'User' if m['role'] == 'user' else 'Pet'}: {m['content']}"
-        for m in history
-    ])
-
-    response = client.chat.completions.create(
-        model="aisingapore/Gemma-SEA-LION-v4-27B-IT",
-        messages=[{
-            "role": "user",
-            "content": f"""Based on this conversation, suggest 3 short quick reply options the user might want to say next.
-Return ONLY a JSON array of 3 strings. No explanation, no markdown, just the array.
-Example: ["I feel better now", "Tell me more", "What should I do?"]
-
-Conversation:
-{history_text}
-
-Rules:
-- Each suggestion under 6 words
-- Natural, conversational tone
-- Relevant to what was just discussed
-- Mix of emotional and action options"""
-        }],
-        max_tokens=100,
-        extra_body={"chat_template_kwargs": {"thinking_mode": "off"}}
-    )
-
-    try:
-        text = response.choices[0].message.content.strip()
-        # Clean up any markdown
-        text = text.replace("```json", "").replace("```", "").strip()
-        suggestions = json.loads(text)
-        if isinstance(suggestions, list) and len(suggestions) > 0:
-            return {"suggestions": suggestions[:3]}
-    except Exception:
-        pass
-
-    # Fallback suggestions
-    return {"suggestions": ["Tell me more", "I feel better", "What should I do?"]}
-
-@router.get("/greeting")
-def get_greeting(user_id: str = Depends(get_current_user_id)):
-    """Generate a personalised greeting based on user's activity today."""
-    from app.core.config import settings
-    from openai import OpenAI
-    from datetime import datetime, date
-
-    client = OpenAI(
-        api_key=settings.SEA_LION_API_KEY,
-        base_url="https://api.sea-lion.ai/v1"
-    )
-
-    # Get today's data
-    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0).isoformat()
-    today_str = str(date.today())
-
-    profile = supabase.table("profiles").select("preferred_name").eq("id", user_id).execute()
-    name = profile.data[0].get("preferred_name", "friend") if profile.data else "friend"
-
-    companion = supabase.table("companions").select("name, mood_state, level").eq("user_id", user_id).execute()
-    companion_data = companion.data[0] if companion.data else {}
-    pet_name = companion_data.get("name", "Sushi")
-
-    missions = supabase.table("user_missions").select("status").eq("user_id", user_id).eq("scheduled_for", today_str).execute()
-    completed = len([m for m in (missions.data or []) if m["status"] == "completed"])
-    total = len(missions.data or [])
-
-    meds = supabase.table("medication_logs").select("status").eq("user_id", user_id).gte("due_at", today_start).execute()
-    taken = len([m for m in (meds.data or []) if m["status"] == "taken"])
-    pending = len([m for m in (meds.data or []) if m["status"] == "pending"])
-
-    streak = supabase.table("daily_streaks").select("current_streak").eq("user_id", user_id).execute()
-    current_streak = streak.data[0].get("current_streak", 0) if streak.data else 0
-
-    hour = datetime.utcnow().hour + 8  # SGT
-    if hour < 12:
-        time_of_day = "morning"
-    elif hour < 18:
-        time_of_day = "afternoon"
-    else:
-        time_of_day = "evening"
-
-    prompt = f"""You are {pet_name}, a warm caring pet companion for {name}, an elderly person in Singapore.
-
-Generate a SHORT greeting message (max 8 words) based on their day so far:
-- Time: {time_of_day}
-- Missions completed: {completed} out of {total}
-- Medications taken: {taken} (pending: {pending})
-- Current streak: {current_streak} days
-
-Rules:
-- Max 5 words
-- Warm and encouraging
-- If they did well: celebrate
-- If nothing done yet: gently motivate
-- Occasional light Singlish is fine
-- No punctuation at the end
-- Examples: "Great work today!", "Good morning, ready to shine?", "Wah, {current_streak} days strong lah!"
-
-Return ONLY the greeting text, nothing else."""
-
-    try:
-        response = client.chat.completions.create(
-            model="aisingapore/Gemma-SEA-LION-v4-27B-IT",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=30,
-            extra_body={"chat_template_kwargs": {"thinking_mode": "off"}}
+        return (
+          <div
+            key={type}
+            onClick={() => handleCare(type)}
+            style={{
+              position: 'absolute',
+              ...pos,
+              width: config.size,
+              height: config.size,
+              borderRadius: '50%',
+              background: config.bg,
+              border: `2px solid ${config.color}33`,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              zIndex: 5,
+              boxShadow: `0 4px 20px ${config.color}33`,
+              animation: 'float 3s ease-in-out infinite',
+              animationDelay: `${index * 0.5}s`,
+              opacity: caring === type ? 0.6 : 1,
+              transition: 'opacity 0.2s'
+            }}
+          >
+            <span style={{ fontSize: config.size * 0.35 }}>{config.emoji}</span>
+            <span style={{
+              fontSize: 10,
+              color: config.color,
+              fontWeight: 600,
+              marginTop: 2
+            }}>
+              {caring === type ? '...' : config.label}
+            </span>
+          </div>
         )
-        greeting = response.choices[0].message.content.strip()
-        # Clean up quotes if model adds them
-        greeting = greeting.strip('"').strip("'")
-        return {"greeting": greeting}
-    except Exception:
-        return {"greeting": "Great to see you today"}
+      })}
+
+      {/* Pet shadow */}
+      <div style={{
+        width: 160,
+        height: 24,
+        left: 115,
+        top: 430,
+        position: 'absolute',
+        background: 'rgba(0,0,0,0.08)',
+        borderRadius: 9999,
+        filter: 'blur(8px)'
+      }} />
+
+      {/* Pet image */}
+      <img
+        src={getPetImage(companion?.species)}
+        alt="pet"
+        style={{
+          width: 260,
+          height: 260,
+          left: 65,
+          top: 180,
+          position: 'absolute',
+          objectFit: 'contain',
+          zIndex: 2
+        }}
+        onError={e => { e.target.style.display = 'none' }}
+      />
+
+      {/* Pet mood */}
+      <div style={{ left: 0, right: 0, top: 448, position: 'absolute', textAlign: 'center' }}>
+        <span style={{ color: 'rgba(0,0,0,0.67)', fontSize: 14, fontWeight: 700 }}>{companionName}</span>
+        <span style={{ color: 'rgba(0,0,0,0.67)', fontSize: 14, fontWeight: 400 }}> is {mood}</span>
+      </div>
+
+      {/* Mood summary */}
+      {moodSummary?.summary && (
+        <div
+          onClick={() => navigate('/companion')}
+          style={{
+            position: 'absolute',
+            left: 24,
+            right: 24,
+            top: 478,
+            background: 'rgba(32,160,144,0.08)',
+            borderRadius: 14,
+            padding: '10px 14px',
+            cursor: 'pointer'
+          }}
+        >
+          <p style={{
+            fontSize: 12,
+            color: 'rgba(0,0,0,0.6)',
+            margin: 0,
+            lineHeight: 1.5,
+            textAlign: 'center'
+          }}>
+            {moodSummary.summary}
+          </p>
+        </div>
+      )}
+
+      {/* Action buttons */}
+      <div style={{
+        position: 'absolute',
+        left: 24,
+        right: 24,
+        top: moodSummary?.summary ? 560 : 510,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 12
+      }}>
+
+        {/* Chat */}
+        <div
+          onClick={() => navigate('/companion')}
+          style={{
+            height: 52,
+            background: 'white',
+            boxShadow: '0px 4px 9px rgba(0,0,0,0.12)',
+            borderRadius: 30,
+            border: '1px solid rgba(0,0,0,0.07)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            gap: 8
+          }}
+        >
+          <span style={{ fontSize: 18 }}>💬</span>
+          <span style={{ color: 'black', fontSize: 16, fontWeight: 400 }}>Chat</span>
+        </div>
+
+        {/* Two column row */}
+        <div style={{ display: 'flex', gap: 12 }}>
+
+          {/* Missions */}
+          <div
+            onClick={() => navigate('/missions')}
+            style={{
+              flex: 1,
+              height: 52,
+              background: 'white',
+              boxShadow: '0px 4px 9px rgba(0,0,0,0.12)',
+              borderRadius: 30,
+              border: '1px solid rgba(0,0,0,0.07)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              gap: 6
+            }}
+          >
+            <span style={{ fontSize: 16 }}>⭐</span>
+            <span style={{ color: 'black', fontSize: 14, fontWeight: 400 }}>Missions</span>
+          </div>
+
+          {/* Reminders */}
+          <div
+            onClick={() => navigate('/medications')}
+            style={{
+              flex: 1,
+              height: 52,
+              background: 'white',
+              boxShadow: '0px 4px 9px rgba(0,0,0,0.12)',
+              borderRadius: 30,
+              border: '1px solid rgba(0,0,0,0.07)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              gap: 6
+            }}
+          >
+            <span style={{ fontSize: 16 }}>💊</span>
+            <span style={{ color: 'black', fontSize: 14, fontWeight: 400 }}>Reminders</span>
+          </div>
+        </div>
+
+        {/* Two column row */}
+        <div style={{ display: 'flex', gap: 12 }}>
+
+          {/* Friends */}
+          <div
+            onClick={() => navigate('/social')}
+            style={{
+              flex: 1,
+              height: 52,
+              background: 'white',
+              boxShadow: '0px 4px 9px rgba(0,0,0,0.12)',
+              borderRadius: 30,
+              border: '1px solid rgba(0,0,0,0.07)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              gap: 6
+            }}
+          >
+            <span style={{ fontSize: 16 }}>👥</span>
+            <span style={{ color: 'black', fontSize: 14, fontWeight: 400 }}>Friends</span>
+          </div>
+
+          {/* Events */}
+          <div
+            onClick={() => navigate('/events')}
+            style={{
+              flex: 1,
+              height: 52,
+              background: 'white',
+              boxShadow: '0px 4px 9px rgba(0,0,0,0.12)',
+              borderRadius: 30,
+              border: '1px solid rgba(0,0,0,0.07)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              gap: 6
+            }}
+          >
+            <span style={{ fontSize: 16 }}>📅</span>
+            <span style={{ color: 'black', fontSize: 14, fontWeight: 400 }}>Events</span>
+          </div>
+        </div>
+
+      </div>
+
+      {/* Floating animation */}
+      <style>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-8px); }
+        }
+      `}</style>
+
+    </div>
+  )
+}

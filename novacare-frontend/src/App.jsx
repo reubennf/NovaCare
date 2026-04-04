@@ -12,6 +12,7 @@ import MedicationsPage from './pages/MedicationsPage'
 import CompanionPage from './pages/CompanionPage'
 import MissionsPage from './pages/MissionsPage'
 import CaregiverPage from './pages/CaregiverPage'
+import SocialPage from './pages/SocialPage'
 import EventsPage from './pages/EventsPage'
 import ProfilePage from './pages/ProfilePage'
 import Layout from './components/Layout'
@@ -67,7 +68,8 @@ export default function App() {
           <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
           <Route path="/companion" element={<ProtectedRoute><CompanionPage /></ProtectedRoute>} />
-
+          <Route path="/social" element={<ProtectedRoute><SocialPage /></ProtectedRoute>} />
+          <Route path="/events" element={<ProtectedRoute><EventsPage /></ProtectedRoute>} />
           {/* Protected routes */}
           <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route index element={<Navigate to="/dashboard" />} />

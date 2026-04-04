@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 
-export default function EventsPage() {
+export default function SocialPage() {
   const navigate = useNavigate()
   return (
     <div style={{
@@ -26,7 +26,7 @@ export default function EventsPage() {
             <path d="M15 18L9 12L15 6" stroke="#191D30" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </div>
-        <span style={{ fontSize: 18, fontWeight: 700 }}>Events</span>
+        <span style={{ fontSize: 18, fontWeight: 700 }}>Friends</span>
       </div>
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <p style={{ color: '#aaa', fontSize: 14 }}>Coming soon!</p>

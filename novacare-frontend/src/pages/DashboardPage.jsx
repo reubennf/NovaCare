@@ -2,11 +2,31 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../lib/api'
 
+const BUBBLE_CONFIG = {
+  feed: {
+    emoji: '🧴',
+    label: 'Feed',
+    color: '#A78BFA',
+    bg: 'rgba(167,139,250,0.15)',
+    size: 90,
+  },
+  groom: {
+    emoji: '🦷',
+    label: 'Groom',
+    color: '#34D399',
+    bg: 'rgba(52,211,153,0.15)',
+    size: 72,
+  },
+}
+
 export default function DashboardPage() {
   const navigate = useNavigate()
   const [profile, setProfile] = useState(null)
   const [companion, setCompanion] = useState(null)
+  const [moodSummary, setMoodSummary] = useState(null)
+  const [careStatus, setCareStatus] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [caring, setCaring] = useState(null)
 
   const getGreeting = () => {
     const hour = new Date().getHours()
@@ -42,26 +62,54 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [profileRes, companionRes] = await Promise.allSettled([
-          api.get('/profiles/me'),
-          api.get('/companion/'),
-        ])
-        if (profileRes.status === 'fulfilled') setProfile(profileRes.value.data)
-        if (companionRes.status === 'fulfilled') setCompanion(companionRes.value.data)
-      } catch (err) {
-        console.error(err)
-      } finally {
-        setLoading(false)
-      }
-    }
     fetchData()
   }, [])
+
+  const fetchData = async () => {
+    try {
+      const [profileRes, companionRes, moodRes, careRes] = await Promise.allSettled([
+        api.get('/profiles/me'),
+        api.get('/companion/'),
+        api.get('/companion/mood-summary'),
+        api.get('/companion/care/status'),
+      ])
+      if (profileRes.status === 'fulfilled') setProfile(profileRes.value.data)
+      if (companionRes.status === 'fulfilled') setCompanion(companionRes.value.data)
+      if (moodRes.status === 'fulfilled') setMoodSummary(moodRes.value.data)
+      if (careRes.status === 'fulfilled') setCareStatus(careRes.value.data)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleCare = async (careType) => {
+    setCaring(careType)
+    try {
+      await api.post(`/companion/care/${careType}`)
+      // Refresh data
+      const [companionRes, careRes] = await Promise.all([
+        api.get('/companion/'),
+        api.get('/companion/care/status'),
+      ])
+      setCompanion(companionRes.data)
+      setCareStatus(careRes.data)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setCaring(null)
+    }
+  }
 
   const userName = profile?.preferred_name || profile?.full_name || 'there'
   const companionName = companion?.name || 'Sushi'
   const mood = getMoodLabel(companion?.mood_state)
+
+  // Which bubbles to show
+  const activeBubbles = Object.entries(BUBBLE_CONFIG).filter(
+    ([type]) => careStatus?.needs_care?.[type]
+  )
 
   if (loading) return (
     <div style={{
@@ -88,40 +136,77 @@ export default function DashboardPage() {
       overflow: 'hidden'
     }}>
 
-      {/* NovaCare logo */}
-      <div style={{ left: 155, top: 34, position: 'absolute' }}>
+      {/* NovaPet logo */}
+      <div style={{ position: 'absolute', left: 0, right: 0, top: 34, textAlign: 'center' }}>
         <span style={{ color: 'black', fontSize: 20, fontWeight: 700 }}>Nova</span>
         <span style={{ color: '#20A090', fontSize: 20, fontWeight: 700 }}>Care</span>
       </div>
 
       {/* Greeting */}
-      <div style={{ left: 54, top: 109, position: 'absolute' }}>
-        <span style={{ color: 'black', fontSize: 30, fontWeight: 400 }}>
-          {getGreeting()},{' '}
-        </span>
-        <span style={{ color: 'black', fontSize: 30, fontWeight: 700 }}>
-          {userName}
-        </span>
+      <div style={{ left: 24, top: 80, position: 'absolute', right: 24, textAlign: 'center' }}>
+        <div>
+          <span style={{ color: 'black', fontSize: 28, fontWeight: 400 }}>{getGreeting()}, </span>
+          <span style={{ color: 'black', fontSize: 28, fontWeight: 700 }}>{userName}</span>
+        </div>
+        <div style={{ color: 'rgba(0,0,0,0.5)', fontSize: 14, marginTop: 2 }}>
+          {getTime()} | Sunny
+        </div>
       </div>
 
-      {/* Time */}
-      <div style={{
-        left: 150,
-        top: 155,
-        position: 'absolute',
-        color: 'rgba(0,0,0,0.67)',
-        fontSize: 16,
-        fontWeight: 400
-      }}>
-        {getTime()} | Sunny
-      </div>
+      {/* Pet care bubbles - floating around pet */}
+      {activeBubbles.map(([type, config], index) => {
+        const positions = [
+          { left: 20, top: 200 },
+          { right: 20, top: 180 },
+          { left: 30, top: 320 },
+          { right: 25, top: 310 },
+        ]
+        const pos = positions[index] || { left: 20, top: 200 }
+
+        return (
+          <div
+            key={type}
+            onClick={() => handleCare(type)}
+            style={{
+              position: 'absolute',
+              ...pos,
+              width: config.size,
+              height: config.size,
+              borderRadius: '50%',
+              background: config.bg,
+              border: `2px solid ${config.color}33`,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              zIndex: 5,
+              boxShadow: `0 4px 20px ${config.color}33`,
+              animation: 'float 3s ease-in-out infinite',
+              animationDelay: `${index * 0.5}s`,
+              opacity: caring === type ? 0.6 : 1,
+              transition: 'opacity 0.2s'
+            }}
+          >
+            <span style={{ fontSize: config.size * 0.35 }}>{config.emoji}</span>
+            <span style={{
+              fontSize: 10,
+              color: config.color,
+              fontWeight: 600,
+              marginTop: 2
+            }}>
+              {caring === type ? '...' : config.label}
+            </span>
+          </div>
+        )
+      })}
 
       {/* Pet shadow */}
       <div style={{
         width: 200,
         height: 30,
         left: 95,
-        top: 445,
+        top: 375,
         position: 'absolute',
         background: 'rgba(0,0,0,0.10)',
         borderRadius: 9999,
@@ -135,95 +220,177 @@ export default function DashboardPage() {
             width: 600,
             height: 600,
             left: 5,
-            top: 80,
+            top: 20,
             position: 'absolute',
             objectFit: 'contain'
         }}
         />
 
       {/* Pet mood */}
-      <div style={{ left: 145, top: 510, position: 'absolute' }}>
-        <span style={{
-          color: 'rgba(0,0,0,0.67)',
-          fontSize: 16,
-          fontWeight: 700
-        }}>
-          {companionName}
-        </span>
-        <span style={{
-          color: 'rgba(0,0,0,0.67)',
-          fontSize: 16,
-          fontWeight: 400
-        }}>
-          {' '}is {mood}
-        </span>
+      <div style={{ left: 0, right: 0, top: 448, position: 'absolute', textAlign: 'center' }}>
+        <span style={{ color: 'rgba(0,0,0,0.67)', fontSize: 14, fontWeight: 700 }}>{companionName}</span>
+        <span style={{ color: 'rgba(0,0,0,0.67)', fontSize: 14, fontWeight: 400 }}> is {mood}</span>
       </div>
 
-      {/* Chat button */}
-      <div
-        onClick={() => navigate('/companion')}
-        style={{
-          width: 273,
-          height: 55,
-          left: 65,
-          top: 572,
-          position: 'absolute',
-          background: 'white',
-          boxShadow: '0px 4px 9px rgba(0,0,0,0.16)',
-          borderRadius: 30,
-          border: '1px solid rgba(0,0,0,0.09)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer'
-        }}
-      >
-        <span style={{ color: 'black', fontSize: 20, fontWeight: 400 }}>Chat</span>
+      {/* Mood summary */}
+      {moodSummary?.summary && (
+        <div
+          onClick={() => navigate('/companion')}
+          style={{
+            position: 'absolute',
+            left: 24,
+            right: 24,
+            top: 478,
+            background: 'rgba(32,160,144,0.08)',
+            borderRadius: 14,
+            padding: '10px 14px',
+            cursor: 'pointer'
+          }}
+        >
+          <p style={{
+            fontSize: 12,
+            color: 'rgba(0,0,0,0.6)',
+            margin: 0,
+            lineHeight: 1.5,
+            textAlign: 'center'
+          }}>
+            {moodSummary.summary}
+          </p>
+        </div>
+      )}
+
+      {/* Action buttons */}
+      <div style={{
+        position: 'absolute',
+        left: 24,
+        right: 24,
+        top: moodSummary?.summary ? 560 : 510,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 12
+      }}>
+
+        {/* Chat */}
+        <div
+          onClick={() => navigate('/companion')}
+          style={{
+            height: 52,
+            background: 'white',
+            boxShadow: '0px 4px 9px rgba(0,0,0,0.12)',
+            borderRadius: 30,
+            border: '1px solid rgba(0,0,0,0.07)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            gap: 8
+          }}
+        >
+          <span style={{ fontSize: 18 }}>💬</span>
+          <span style={{ color: 'black', fontSize: 16, fontWeight: 400 }}>Chat</span>
+        </div>
+
+        {/* Two column row */}
+        <div style={{ display: 'flex', gap: 12 }}>
+
+          {/* Missions */}
+          <div
+            onClick={() => navigate('/missions')}
+            style={{
+              flex: 1,
+              height: 52,
+              background: 'white',
+              boxShadow: '0px 4px 9px rgba(0,0,0,0.12)',
+              borderRadius: 30,
+              border: '1px solid rgba(0,0,0,0.07)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              gap: 6
+            }}
+          >
+            <span style={{ fontSize: 16 }}>⭐</span>
+            <span style={{ color: 'black', fontSize: 14, fontWeight: 400 }}>Missions</span>
+          </div>
+
+          {/* Reminders */}
+          <div
+            onClick={() => navigate('/medications')}
+            style={{
+              flex: 1,
+              height: 52,
+              background: 'white',
+              boxShadow: '0px 4px 9px rgba(0,0,0,0.12)',
+              borderRadius: 30,
+              border: '1px solid rgba(0,0,0,0.07)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              gap: 6
+            }}
+          >
+            <span style={{ fontSize: 16 }}>💊</span>
+            <span style={{ color: 'black', fontSize: 14, fontWeight: 400 }}>Reminders</span>
+          </div>
+        </div>
+
+        {/* Two column row */}
+        <div style={{ display: 'flex', gap: 12 }}>
+
+          {/* Friends */}
+          <div
+            onClick={() => navigate('/social')}
+            style={{
+              flex: 1,
+              height: 52,
+              background: 'white',
+              boxShadow: '0px 4px 9px rgba(0,0,0,0.12)',
+              borderRadius: 30,
+              border: '1px solid rgba(0,0,0,0.07)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              gap: 6
+            }}
+          >
+            <span style={{ fontSize: 16 }}>👥</span>
+            <span style={{ color: 'black', fontSize: 14, fontWeight: 400 }}>Friends</span>
+          </div>
+
+          {/* Events */}
+          <div
+            onClick={() => navigate('/events')}
+            style={{
+              flex: 1,
+              height: 52,
+              background: 'white',
+              boxShadow: '0px 4px 9px rgba(0,0,0,0.12)',
+              borderRadius: 30,
+              border: '1px solid rgba(0,0,0,0.07)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              gap: 6
+            }}
+          >
+            <span style={{ fontSize: 16 }}>📅</span>
+            <span style={{ color: 'black', fontSize: 14, fontWeight: 400 }}>Events</span>
+          </div>
+        </div>
+
       </div>
 
-      {/* Today's Missions button */}
-      <div
-        onClick={() => navigate('/missions')}
-        style={{
-          width: 273,
-          height: 55,
-          left: 64,
-          top: 645,
-          position: 'absolute',
-          background: 'white',
-          boxShadow: '0px 4px 9px rgba(0,0,0,0.16)',
-          borderRadius: 30,
-          border: '1px solid rgba(0,0,0,0.09)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer'
-        }}
-      >
-        <span style={{ color: 'black', fontSize: 20, fontWeight: 400 }}>Today's Missions</span>
-      </div>
-
-      {/* Reminders button */}
-      <div
-        onClick={() => navigate('/medications')}
-        style={{
-          width: 273,
-          height: 55,
-          left: 64,
-          top: 718,
-          position: 'absolute',
-          background: 'white',
-          boxShadow: '0px 4px 9px rgba(0,0,0,0.16)',
-          borderRadius: 30,
-          border: '1px solid rgba(0,0,0,0.09)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer'
-        }}
-      >
-        <span style={{ color: 'black', fontSize: 20, fontWeight: 400 }}>Reminders</span>
-      </div>
+      {/* Floating animation */}
+      <style>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-8px); }
+        }
+      `}</style>
 
     </div>
   )

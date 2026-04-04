@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import api from '../lib/api'
+import { useNavigate, Link } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import {
   getChatMessages,
@@ -14,6 +15,7 @@ export default function CompanionPage() {
   const [messages, setMessages] = useState(() => getChatMessages())
   const [threadId, setThreadId] = useState(() => getChatThreadId())
   const [input, setInput] = useState('')
+  const navigate = useNavigate()
   const [greeting, setGreeting] = useState('Great work today!')
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
@@ -332,6 +334,7 @@ export default function CompanionPage() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            zIndex: 10
           }}
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -340,7 +343,7 @@ export default function CompanionPage() {
         </div>
 
         <span style={{ color: 'black', fontSize: 20, fontWeight: 700 }}>Nova</span>
-        <span style={{ color: '#20A090', fontSize: 20, fontWeight: 700 }}>Pet</span>
+        <span style={{ color: '#20A090', fontSize: 20, fontWeight: 700 }}>Care</span>
       </div>
      {/* Greeting bubble */}
       <div style={{
