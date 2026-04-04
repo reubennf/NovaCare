@@ -69,7 +69,7 @@ export default function DashboardPage() {
 
   const fetchData = async () => {
     try {
-      const [profileRes, companionRes, moodRes, careRes] = await Promise.allSettled([
+      const [profileRes, companionRes] = await Promise.allSettled([
         api.get('/profiles/me'),
         api.get('/companion/'),
         // api.get('/companion/mood-summary'),
@@ -77,8 +77,8 @@ export default function DashboardPage() {
       ])
       if (profileRes.status === 'fulfilled') setProfile(profileRes.value.data)
       if (companionRes.status === 'fulfilled') setCompanion(companionRes.value.data)
-      if (moodRes.status === 'fulfilled') setMoodSummary(moodRes.value.data)
-      if (careRes.status === 'fulfilled') setCareStatus(careRes.value.data)
+    //   if (moodRes.status === 'fulfilled') setMoodSummary(moodRes.value.data)
+    //   if (careRes.status === 'fulfilled') setCareStatus(careRes.value.data)
     } catch (err) {
       console.error(err)
     } finally {
