@@ -209,7 +209,8 @@ export default function FeedPage() {
             height: 36,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            zIndex: 4,
           }}
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -276,7 +277,7 @@ export default function FeedPage() {
           <div style={{
             position: 'absolute',
             top: 20,
-            left: '50%',
+            left: '45%',
             transform: 'translateX(-30%)',
             background: '#20A090',
             color: 'white',
@@ -389,7 +390,7 @@ export default function FeedPage() {
           fontSize: 14,
           color: 'rgba(0,0,0,0.35)'
         }}>
-          Buy to feed instantly
+          Rewards
         </div>
       </div>
 
@@ -397,7 +398,8 @@ export default function FeedPage() {
       <div style={{
         flex: 1,
         overflowY: 'auto',
-        padding: '0 16px 24px'
+        padding: '0 16px 24px',
+        zIndex: 4,
       }}>
         <div style={{
           display: 'grid',

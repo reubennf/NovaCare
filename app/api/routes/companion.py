@@ -298,6 +298,8 @@ def perform_pet_care(care_type: str, user_id: str = Depends(get_current_user_id)
         raise HTTPException(status_code=400, detail="Invalid care type")
     
     from datetime import datetime
+    from app.services.mission_service import award_points
+
     supabase.table("pet_care_logs").insert({
         "user_id": user_id,
         "care_type": care_type,
@@ -318,7 +320,16 @@ def perform_pet_care(care_type: str, user_id: str = Depends(get_current_user_id)
             updates["xp"] = pet["xp"] + 5
         supabase.table("companions").update(updates).eq("id", pet["id"]).execute()
 
-    return {"message": f"{care_type} done!", "care_type": care_type}
+    # Award 5 points for feed or groom
+    if care_type in ["feed", "groom"]:
+        award_points(
+            user_id=user_id,
+            points=5,
+            source_type="mission",
+            note=f"Pet care: {care_type}"
+        )
+
+    return {"message": f"{care_type} done!", "care_type": care_type, "points_awarded": 5 if care_type in ["feed", "groom"] else 0}
 
 @router.get("/care/status")
 def get_care_status(user_id: str = Depends(get_current_user_id)):
