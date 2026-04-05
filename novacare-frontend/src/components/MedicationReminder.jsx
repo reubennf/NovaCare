@@ -44,6 +44,12 @@ export default function MedicationReminder() {
   }
 
   useEffect(() => {
+    // TEMP: force show for testing
+    setReminder({
+        log: { id: 'test', due_at: new Date().toISOString(), medication_id: 'test' },
+        med: { name: 'Amlodipine', dosage: '5mg', notes: 'High blood pressure' }
+    })
+    setVisible(true)
     // Check on mount
     checkForDueMedications()
 

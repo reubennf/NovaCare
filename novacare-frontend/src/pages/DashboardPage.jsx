@@ -368,7 +368,7 @@ export default function DashboardPage() {
 
           {/* Events */}
           <div
-            onClick={() => navigate('/events')}
+            onClick={() => navigate('/social')}
             style={{
               flex: 1,
               height: 52,

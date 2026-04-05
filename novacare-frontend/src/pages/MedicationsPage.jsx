@@ -90,7 +90,15 @@ export default function MedicationsPage() {
       setLoading(false)
     }
   }
-
+  const handleDelete = async (medId, medName) => {
+    if (!confirm(`Remove ${medName} from your medications?`)) return
+    try {
+      await api.delete(`/medications/${medId}`)
+      fetchData()
+    } catch (err) {
+      console.error(err)
+    }
+  }
   const handleAddPreset = async (preset) => {
     setAddingPreset(preset.name)
     try {
@@ -373,6 +381,12 @@ export default function MedicationsPage() {
                     <p style={{ margin: '2px 0 0', fontSize: 12, color: '#888' }}>{med.dosage}</p>
                     {med.notes && <p style={{ margin: '2px 0 0', fontSize: 11, color }}>{med.notes}</p>}
                   </div>
+                  <button
+                    onClick={() => handleDelete(med.id, med.name)}
+                    style={{ background: 'transparent', border: '1px solid #FFE0E0', borderRadius: 16, color: '#E53E3E', fontSize: 11, padding: '4px 10px', cursor: 'pointer', fontFamily: 'Inter', flexShrink: 0 }}
+                  >
+                    Remove
+                  </button>
                 </div>
               )
             })}

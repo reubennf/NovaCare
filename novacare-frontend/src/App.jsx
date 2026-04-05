@@ -18,7 +18,6 @@ import RewardPage from './pages/RewardPage'
 import RanksPage from './pages/RanksPage'
 import CaregiverPage from './pages/CaregiverPage'
 import SocialPage from './pages/SocialPage'
-import EventsPage from './pages/EventsPage'
 import ProfilePage from './pages/ProfilePage'
 import Layout from './components/Layout'
 import DressUpPage from './pages/DressUpPage'
@@ -96,7 +95,6 @@ function AppRoutes() {
         <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route index element={<Navigate to="/dashboard" />} />
           <Route path="caregiver" element={<CaregiverPage />} />
-          <Route path="events" element={<EventsPage />} />
           <Route path="profile" element={<ProfilePage />} />
         </Route>
 

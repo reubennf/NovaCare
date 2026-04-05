@@ -119,3 +119,37 @@ def generate_logs(schedule: dict, user_id: str):
             })
     if logs:
         supabase.table("medication_logs").insert(logs).execute()
+
+
+@router.delete("/{medication_id}")
+def delete_medication(medication_id: str, user_id: str = Depends(get_current_user_id)):
+    """Delete a medication and all its logs."""
+    # Verify ownership first
+    med = supabase.table("medications")\
+        .select("id")\
+        .eq("id", medication_id)\
+        .eq("user_id", user_id)\
+        .execute()
+    
+    if not med.data:
+        raise HTTPException(status_code=404, detail="Medication not found")
+
+    # Delete logs first (foreign key)
+    supabase.table("medication_logs")\
+        .delete()\
+        .eq("medication_id", medication_id)\
+        .execute()
+
+    # Delete schedules
+    supabase.table("medication_schedules")\
+        .delete()\
+        .eq("medication_id", medication_id)\
+        .execute()
+
+    # Delete medication
+    supabase.table("medications")\
+        .delete()\
+        .eq("id", medication_id)\
+        .execute()
+
+    return {"message": "Deleted"}
