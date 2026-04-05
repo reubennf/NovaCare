@@ -46,14 +46,17 @@ export default function DashboardPage() {
     })
   }
 
-  const getMoodLabel = (mood) => {
+ const getMoodLabel = (mood) => {
     switch (mood) {
-      case 'happy': return 'happy'
-      case 'concerned': return 'a little concerned'
-      case 'sleepy': return 'sleepy'
-      default: return 'happy'
+        case 'happy': return 'is happy 😊'
+        case 'hungry': return 'is hungry 🍗'
+        case 'dirty': return 'needs a bath 🧴'
+        case 'sad': return 'is feeling sad 😢'
+        case 'tired': return 'is a little tired 😴'
+        case 'concerned': return 'seems worried 😟'
+        default: return 'is happy 😊'
     }
-  }
+    }
 
   const getPetImage = (species) => {
     switch (species) {
@@ -70,22 +73,20 @@ export default function DashboardPage() {
 
   const fetchData = async () => {
     try {
-      const [profileRes, companionRes] = await Promise.allSettled([
+        const [profileRes, companionRes, careRes] = await Promise.allSettled([
         api.get('/profiles/me'),
         api.get('/companion/'),
-        // api.get('/companion/mood-summary'),
-        // api.get('/companion/care/status'),
-      ])
-      if (profileRes.status === 'fulfilled') setProfile(profileRes.value.data)
-      if (companionRes.status === 'fulfilled') setCompanion(companionRes.value.data)
-    //   if (moodRes.status === 'fulfilled') setMoodSummary(moodRes.value.data)
-    //   if (careRes.status === 'fulfilled') setCareStatus(careRes.value.data)
+        api.get('/companion/care/status'),
+        ])
+        if (profileRes.status === 'fulfilled') setProfile(profileRes.value.data)
+        if (companionRes.status === 'fulfilled') setCompanion(companionRes.value.data)
+        if (careRes.status === 'fulfilled') setCareStatus(careRes.value.data)
     } catch (err) {
-      console.error(err)
+        console.error(err)
     } finally {
-      setLoading(false)
+        setLoading(false)
     }
-  }
+    }
 
   const handleCare = async (careType) => {
     setCaring(careType)
@@ -109,11 +110,11 @@ export default function DashboardPage() {
   const companionName = companion?.name || 'Sushi'
   const mood = getMoodLabel(companion?.mood_state)
 
-//   // Which bubbles to show
-//   const activeBubbles = Object.entries(BUBBLE_CONFIG).filter(
-//     ([type]) => careStatus?.needs_care?.[type]
-//   )
-  const activeBubbles = Object.entries(BUBBLE_CONFIG)
+  // Which bubbles to show
+  const activeBubbles = Object.entries(BUBBLE_CONFIG).filter(
+    ([type]) => careStatus?.needs_care?.[type]
+  )
+//   const activeBubbles = Object.entries(BUBBLE_CONFIG)
 
   if (loading) return (
     <div style={{
@@ -232,10 +233,44 @@ export default function DashboardPage() {
         />
 
       {/* Pet mood */}
-      <div style={{ left: 0, right: 0, top: 448, position: 'absolute', textAlign: 'center' }}>
-        <span style={{ color: 'rgba(0,0,0,0.67)', fontSize: 14, fontWeight: 700 }}>{companionName}</span>
-        <span style={{ color: 'rgba(0,0,0,0.67)', fontSize: 14, fontWeight: 400 }}> is {mood}</span>
-      </div>
+        <div style={{ left: 0, right: 0, top: 448, position: 'absolute', textAlign: 'center' }}>
+        <span style={{ color: 'rgba(0,0,0,0.67)', fontSize: 14, fontWeight: 700 }}>{companionName} </span>
+        <span style={{ color: 'rgba(0,0,0,0.67)', fontSize: 14, fontWeight: 400 }}>{mood}</span>
+        </div>
+
+        {/* Nudge message when pet needs care */}
+        {['hungry', 'dirty', 'sad', 'tired'].includes(companion?.mood_state) && (
+        <div
+            onClick={() => {
+            if (companion?.mood_state === 'hungry' || companion?.mood_state === 'tired') navigate('/feed')
+            else if (companion?.mood_state === 'dirty') navigate('/groom')
+            else navigate('/medications')
+            }}
+            style={{
+            position: 'absolute',
+            left: 24,
+            right: 24,
+            top: 470,
+            background: companion?.mood_state === 'hungry' || companion?.mood_state === 'tired'
+                ? 'rgba(255,107,107,0.08)'
+                : companion?.mood_state === 'dirty'
+                ? 'rgba(52,211,153,0.08)'
+                : 'rgba(32,160,144,0.08)',
+            borderRadius: 12,
+            padding: '8px 14px',
+            textAlign: 'center',
+            cursor: 'pointer',
+            zIndex: 10
+            }}
+        >
+            <p style={{ margin: 0, fontSize: 12, color: 'rgba(0,0,0,0.5)', lineHeight: 1.5 }}>
+            {companion?.mood_state === 'hungry' && `${companionName} is hungry! Tap to feed 🍗`}
+            {companion?.mood_state === 'tired' && `${companionName} could use some food soon 🍗`}
+            {companion?.mood_state === 'dirty' && `${companionName} needs grooming! Tap to groom 🧴`}
+            {companion?.mood_state === 'sad' && `${companionName} missed some medicine today 💊`}
+            </p>
+        </div>
+        )}
 
       {/* Mood summary */}
       {moodSummary?.summary && (

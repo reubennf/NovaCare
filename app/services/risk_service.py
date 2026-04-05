@@ -197,3 +197,82 @@ Do not use bullet points. Write as flowing prose."""
     )
 
     return response.choices[0].message.content
+
+def update_companion_mood_from_care(user_id: str):
+    """Update companion mood based on care status and medications."""
+    from datetime import datetime, timedelta
+
+    now = datetime.utcnow()
+
+    # Check last feed time
+    last_feed = supabase.table("pet_care_logs")\
+        .select("performed_at")\
+        .eq("user_id", user_id)\
+        .eq("care_type", "feed")\
+        .order("performed_at", desc=True)\
+        .limit(1)\
+        .execute()
+
+    # Check last groom time
+    last_groom = supabase.table("pet_care_logs")\
+        .select("performed_at")\
+        .eq("user_id", user_id)\
+        .eq("care_type", "groom")\
+        .order("performed_at", desc=True)\
+        .limit(1)\
+        .execute()
+
+    # Check missed medications today
+    today_start = now.replace(hour=0, minute=0, second=0).isoformat()
+    missed_meds = supabase.table("medication_logs")\
+        .select("id")\
+        .eq("user_id", user_id)\
+        .eq("status", "pending")\
+        .gte("due_at", today_start)\
+        .lte("due_at", now.isoformat())\
+        .execute()
+
+    # Calculate hours since last care
+    def hours_since(logs):
+        if not logs.data:
+            return 999  # never done
+        try:
+            last = datetime.fromisoformat(
+                logs.data[0]["performed_at"].replace("Z", "+00:00")
+            ).replace(tzinfo=None)
+            return (now - last).total_seconds() / 3600
+        except Exception:
+            return 999
+
+    hours_since_feed = hours_since(last_feed)
+    hours_since_groom = hours_since(last_groom)
+    missed_med_count = len(missed_meds.data or [])
+
+    # Determine mood — priority order
+    if hours_since_feed >= 7:
+        mood = "hungry"
+    elif hours_since_groom >= 12:
+        mood = "dirty"
+    elif missed_med_count >= 2:
+        mood = "sad"
+    elif hours_since_feed >= 4:
+        mood = "tired"
+    else:
+        mood = "happy"
+
+    # Update companion
+    companion = supabase.table("companions")\
+        .select("id")\
+        .eq("user_id", user_id)\
+        .execute()
+
+    if companion.data:
+        supabase.table("companions")\
+            .update({
+                "mood_state": mood,
+                "updated_at": now.isoformat()
+            })\
+            .eq("id", companion.data[0]["id"])\
+            .execute()
+
+    return mood

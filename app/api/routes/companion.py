@@ -328,6 +328,12 @@ def perform_pet_care(care_type: str, user_id: str = Depends(get_current_user_id)
             source_type="mission",
             note=f"Pet care: {care_type}"
         )
+    # At the end of perform_pet_care, after updating companion stats:
+    try:
+        from app.services.risk_service import update_companion_mood_from_care
+        update_companion_mood_from_care(user_id)
+    except Exception:
+        pass
 
     return {"message": f"{care_type} done!", "care_type": care_type, "points_awarded": 5 if care_type in ["feed", "groom"] else 0}
 

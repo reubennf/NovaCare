@@ -44,3 +44,27 @@ def stop_scheduler():
     if scheduler.running:
         scheduler.shutdown()
         logger.info("Scheduler stopped")
+
+def update_all_companion_moods():
+    """Update mood for all users every hour."""
+    from app.services.risk_service import update_companion_mood_from_care
+    
+    users = supabase.table("profiles")\
+        .select("id")\
+        .eq("onboarding_status", "completed")\
+        .execute()
+    
+    for user in (users.data or []):
+        try:
+            update_companion_mood_from_care(user["id"])
+        except Exception as e:
+            print(f"Mood update failed for {user['id']}: {e}")
+
+# Add to scheduler setup:
+scheduler.add_job(
+    update_all_companion_moods,
+    'interval',
+    hours=1,
+    id='mood_worker',
+    replace_existing=True
+)
