@@ -32,25 +32,42 @@ function ProtectedRoute({ children }) {
 
   useEffect(() => {
     if (user) {
-      api.get('/onboarding/status')
-        .then(res => setOnboardingStatus(res.data.onboarding_status))
-        .catch(() => setOnboardingStatus('not_started'))
-        .finally(() => setChecking(false))
+      import('./lib/supabase').then(({ supabase }) => {
+        supabase
+          .from('profiles')
+          .select('onboarding_status')
+          .eq('id', user.id)
+          .single()
+          .then(({ data, error }) => {
+            if (data?.onboarding_status) {
+              setOnboardingStatus(data.onboarding_status)
+            } else {
+              setOnboardingStatus('not_started')
+            }
+          })
+          .finally(() => setChecking(false))
+      })
     } else {
       setChecking(false)
     }
   }, [user])
 
   if (loading || checking) return (
-    <div className="flex items-center justify-center h-screen">Loading...</div>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', fontFamily: 'Inter' }}>
+      <p style={{ color: '#aaa' }}>Loading...</p>
+    </div>
   )
-  if (!user) return <Navigate to="/welcome" />
 
-  if (onboardingStatus !== 'completed' && window.location.pathname !== '/onboarding') {
-    return <Navigate to="/onboarding" />
+  if (!user) return <Navigate to="/welcome" replace />
+
+  const currentPath = window.location.pathname
+
+  if (onboardingStatus !== 'completed' && currentPath !== '/onboarding') {
+    return <Navigate to="/onboarding" replace />
   }
-  if (onboardingStatus === 'completed' && window.location.pathname === '/onboarding') {
-    return <Navigate to="/dashboard" />
+
+  if (onboardingStatus === 'completed' && currentPath === '/onboarding') {
+    return <Navigate to="/dashboard" replace />
   }
 
   return children
