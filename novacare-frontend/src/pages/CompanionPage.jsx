@@ -378,13 +378,13 @@ export default function CompanionPage() {
         alignItems: 'flex-end',
         position: 'relative',
         flexShrink: 0,
-        height: 250,
+        height: 230,
         marginBottom: 8
       }}>
         <PetWithAccessories
           species={companion?.species}
           size={450}
-          style={{ top: 80, left:100 }}
+          style={{ top: 80 }}
         />
         {/* Shadow */}
         <div style={{

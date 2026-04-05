@@ -24,7 +24,7 @@ import Layout from './components/Layout'
 import DressUpPage from './pages/DressUpPage'
 import DecoratePage from './pages/DecoratePage'
 import FriendChatPage from './pages/FriendChatPage'
-
+import MedicationReminder from './components/MedicationReminder'
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
@@ -47,7 +47,6 @@ function ProtectedRoute({ children }) {
   )
   if (!user) return <Navigate to="/welcome" />
 
-  // Skip onboarding check if already on onboarding page
   if (onboardingStatus !== 'completed' && window.location.pathname !== '/onboarding') {
     return <Navigate to="/onboarding" />
   }
@@ -65,42 +64,55 @@ function PublicRoute({ children }) {
   return children
 }
 
+function AppRoutes() {
+  const { user } = useAuth()
+  return (
+    <>
+      {/* Global medication reminder — shows on every page when logged in */}
+      {user && <MedicationReminder />}
+
+      <Routes>
+        {/* Public */}
+        <Route path="/welcome" element={<PublicRoute><WelcomePage /></PublicRoute>} />
+        <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+        <Route path="/signup" element={<PublicRoute><SignupPage /></PublicRoute>} />
+
+        {/* Standalone pages - no sidebar */}
+        <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+        <Route path="/companion" element={<ProtectedRoute><CompanionPage /></ProtectedRoute>} />
+        <Route path="/missions" element={<ProtectedRoute><MissionsPage /></ProtectedRoute>} />
+        <Route path="/reward" element={<ProtectedRoute><RewardPage /></ProtectedRoute>} />
+        <Route path="/ranks" element={<ProtectedRoute><RanksPage /></ProtectedRoute>} />
+        <Route path="/groom" element={<ProtectedRoute><GroomPage /></ProtectedRoute>} />
+        <Route path="/feed" element={<ProtectedRoute><FeedPage /></ProtectedRoute>} />
+        <Route path="/dressup" element={<ProtectedRoute><DressUpPage /></ProtectedRoute>} />
+        <Route path="/decorate" element={<ProtectedRoute><DecoratePage /></ProtectedRoute>} />
+        <Route path="/social" element={<ProtectedRoute><SocialPage /></ProtectedRoute>} />
+        <Route path="/chat/:friendId" element={<ProtectedRoute><FriendChatPage /></ProtectedRoute>} />
+        <Route path="/medications" element={<ProtectedRoute><MedicationsPage /></ProtectedRoute>} />
+
+        {/* Sidebar layout pages */}
+        <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+          <Route index element={<Navigate to="/dashboard" />} />
+          <Route path="caregiver" element={<CaregiverPage />} />
+          <Route path="events" element={<EventsPage />} />
+          <Route path="profile" element={<ProfilePage />} />
+        </Route>
+
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/welcome" />} />
+      </Routes>
+    </>
+  )
+}
+
 export default function App() {
   return (
     <AuthProvider>
       <EquipmentProvider>
         <BrowserRouter>
-          <Routes>
-            {/* Public routes */}
-            <Route path="/welcome" element={<PublicRoute><WelcomePage /></PublicRoute>} />
-            <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
-            <Route path="/signup" element={<PublicRoute><SignupPage /></PublicRoute>} />
-            <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
-            <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-            <Route path="/companion" element={<ProtectedRoute><CompanionPage /></ProtectedRoute>} />
-            <Route path="/missions" element={<ProtectedRoute><MissionsPage /></ProtectedRoute>} />
-            <Route path="/social" element={<ProtectedRoute><SocialPage /></ProtectedRoute>} />
-            <Route path="/events" element={<ProtectedRoute><EventsPage /></ProtectedRoute>} />
-            <Route path="/reward" element={<ProtectedRoute><RewardPage /></ProtectedRoute>} />
-            <Route path="/ranks" element={<ProtectedRoute><RanksPage /></ProtectedRoute>} />
-            <Route path="/groom" element={<ProtectedRoute><GroomPage /></ProtectedRoute>} />
-            <Route path="/feed" element={<ProtectedRoute><FeedPage /></ProtectedRoute>} />
-            <Route path="/dressup" element={<ProtectedRoute><DressUpPage /></ProtectedRoute>} />
-            <Route path="/decorate" element={<ProtectedRoute><DecoratePage /></ProtectedRoute>} />
-            <Route path="/social" element={<ProtectedRoute><SocialPage /></ProtectedRoute>} />
-            <Route path="/chat/:friendId" element={<ProtectedRoute><FriendChatPage /></ProtectedRoute>} />
-            {/* Protected routes */}
-            <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-              <Route index element={<Navigate to="/dashboard" />} />
-              <Route path="medications" element={<MedicationsPage />} />
-              <Route path="caregiver" element={<CaregiverPage />} />
-              <Route path="events" element={<EventsPage />} />
-              <Route path="profile" element={<ProfilePage />} />
-            </Route>
-
-            {/* Fallback */}
-            <Route path="*" element={<Navigate to="/welcome" />} />
-          </Routes>
+          <AppRoutes />
         </BrowserRouter>
       </EquipmentProvider>
     </AuthProvider>

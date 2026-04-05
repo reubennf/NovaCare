@@ -153,7 +153,7 @@ export default function SocialPage() {
           </div>
           <div>
             <span style={{ fontSize: 18, fontWeight: 700, color: 'black' }}>Nova</span>
-            <span style={{ fontSize: 18, fontWeight: 700, color: '#20A090' }}>Pet</span>
+            <span style={{ fontSize: 18, fontWeight: 700, color: '#20A090' }}>Care</span>
           </div>
           {activeTab === 'Events' && (
             <button onClick={() => setShowCreateEvent(!showCreateEvent)} style={{ ...btnStyle(), position: 'absolute', right: 0, fontSize: 12, padding: '6px 12px' }}>

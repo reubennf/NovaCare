@@ -70,7 +70,7 @@ def get_schedules(medication_id: str, user_id: str = Depends(get_current_user_id
     return result.data
 
 @router.get("/logs/today", response_model=list[MedicationLogResponse])
-def get_todays_logs(user_id: str = Depends(get_current_user_id)):
+def get_today_logs(user_id: str = Depends(get_current_user_id)):
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0).isoformat()
     today_end = datetime.utcnow().replace(hour=23, minute=59, second=59).isoformat()
     result = supabase.table("medication_logs")\
@@ -78,18 +78,24 @@ def get_todays_logs(user_id: str = Depends(get_current_user_id)):
         .eq("user_id", user_id)\
         .gte("due_at", today_start)\
         .lte("due_at", today_end)\
+        .order("due_at")\
         .execute()
-    return result.data
+    return result.data or []
 
 @router.patch("/logs/{log_id}", response_model=MedicationLogResponse)
 def update_log(log_id: str, payload: MedicationLogUpdate, user_id: str = Depends(get_current_user_id)):
-    updates = payload.model_dump(exclude_none=True)
-    if payload.status == "taken":
+    from datetime import datetime
+    updates = {"status": payload.get("status")}
+    if payload.get("status") == "taken":
         updates["taken_at"] = datetime.utcnow().isoformat()
-    result = supabase.table("medication_logs").update(updates).eq("id", log_id).eq("user_id", user_id).execute()
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Log not found")
-    return result.data[0]
+
+    supabase.table("medication_logs")\
+        .update(updates)\
+        .eq("id", log_id)\
+        .eq("user_id", user_id)\
+        .execute()
+
+    return {"message": "Updated"}
 
 def generate_logs(schedule: dict, user_id: str):
     logs = []

@@ -113,7 +113,7 @@ export default function DecoratePage() {
 
         <div style={{ marginBottom: 4 }}>
           <span style={{ fontSize: 18, fontWeight: 700, color: 'black' }}>Nova</span>
-          <span style={{ fontSize: 18, fontWeight: 700, color: '#20A090' }}>Pet</span>
+          <span style={{ fontSize: 18, fontWeight: 700, color: '#20A090' }}>Care</span>
         </div>
         <h1 style={{ fontSize: 24, fontWeight: 400, margin: '0 0 2px', color: 'black' }}>
           Decorate <strong>{companionName}'s</strong> space
@@ -160,8 +160,8 @@ export default function DecoratePage() {
         </div>
 
         {/* Pet - centered */}
-        <div style={{ position: 'absolute', left: '50%', bottom: 30, transform: 'translateX(-50%)', animation: 'float 3s ease-in-out infinite', zIndex: 2 }}>
-          <img src={getPetImage(companion?.species)} alt="pet" style={{ width: 140, height: 140, objectFit: 'contain' }} onError={e => { e.target.style.display = 'none' }} />
+        <div style={{ position: 'absolute', left: '50%', bottom: -150, transform: 'translateX(-50%)', zIndex: 2 }}>
+          <img src={getPetImage(companion?.species)} alt="pet" style={{ width: 500, height: 500, objectFit: 'contain' }} onError={e => { e.target.style.display = 'none' }} />
         </div>
 
         {/* Extra placed items scattered */}

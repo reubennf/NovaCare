@@ -109,11 +109,11 @@ export default function DashboardPage() {
   const companionName = companion?.name || 'Sushi'
   const mood = getMoodLabel(companion?.mood_state)
 
-  // Which bubbles to show
-  const activeBubbles = Object.entries(BUBBLE_CONFIG).filter(
-    ([type]) => careStatus?.needs_care?.[type]
-  )
-//   const activeBubbles = Object.entries(BUBBLE_CONFIG)
+//   // Which bubbles to show
+//   const activeBubbles = Object.entries(BUBBLE_CONFIG).filter(
+//     ([type]) => careStatus?.needs_care?.[type]
+//   )
+  const activeBubbles = Object.entries(BUBBLE_CONFIG)
 
   if (loading) return (
     <div style={{
@@ -228,6 +228,7 @@ export default function DashboardPage() {
         <PetWithAccessories
         species={companion?.species}
         size={600}
+        style={{right: 100}}
         />
 
       {/* Pet mood */}

@@ -177,49 +177,33 @@ export default function DressUpPage() {
         </p>
       </div>
 
-      {/* Pet + Wardrobe */}
       <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '20px 24px 0',
-        gap: 16,
-        flexShrink: 0,
-        height: 220
-      }}>
-        {/* Pet with accessories */}
-        <div style={{
-          animation: 'pet-float 3s ease-in-out infinite'
+        position: 'relative',
+        height: 260,
+        marginTop: 10
         }}>
-          <PetWithAccessories
-            species={companion?.species}
-            size={300}
-          />
-        </div>
-
         {/* Wardrobe */}
+        <img
+            src="/wardrobe.png"
+            style={{
+            position: 'absolute',
+            right: 0,
+            top: 20,
+            width: 220,
+            zIndex: 1
+            }}
+        />
+
+        {/* Pet */}
         <div style={{
-          width: 300,
-          height: 300,
-          top: 50,
-          filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.1))'
+            position: 'absolute',
+            left: -100,
+            bottom: -150,
+            zIndex: 2
         }}>
-          <img
-        src="/wardrobe.png"
-        alt="wardrobe"
-        style={{
-          width: '100%',
-          height: '100%',
-          objectFit: 'contain',
-          position: 'relative',
-          right: 10,
-          top: 50,
-          zIndex: 2
-        }}
-        onError={e => { e.target.style.display = 'none' }}
-      />
+            <PetWithAccessories size={500} />
         </div>
-      </div>
+        </div>
 
       {/* Currently equipped badges */}
       <div style={{
@@ -270,6 +254,7 @@ export default function DressUpPage() {
               flex: 1,
               textAlign: 'center',
               padding: '12px 0',
+              zIndex: 3,
               fontWeight: activeTab === tab ? 700 : 400,
               fontSize: 14,
               color: activeTab === tab ? '#20A090' : 'rgba(0,0,0,0.35)',
@@ -291,6 +276,7 @@ export default function DressUpPage() {
       }}>
         <div style={{
           display: 'grid',
+          zIndex: 3,
           gridTemplateColumns: 'repeat(4, 1fr)',
           gap: 10
         }}>
