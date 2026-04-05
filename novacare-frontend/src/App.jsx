@@ -23,6 +23,7 @@ import ProfilePage from './pages/ProfilePage'
 import Layout from './components/Layout'
 import DressUpPage from './pages/DressUpPage'
 import DecoratePage from './pages/DecoratePage'
+import FriendChatPage from './pages/FriendChatPage'
 
 
 function ProtectedRoute({ children }) {
@@ -86,7 +87,8 @@ export default function App() {
             <Route path="/feed" element={<ProtectedRoute><FeedPage /></ProtectedRoute>} />
             <Route path="/dressup" element={<ProtectedRoute><DressUpPage /></ProtectedRoute>} />
             <Route path="/decorate" element={<ProtectedRoute><DecoratePage /></ProtectedRoute>} />
-
+            <Route path="/social" element={<ProtectedRoute><SocialPage /></ProtectedRoute>} />
+            <Route path="/chat/:friendId" element={<ProtectedRoute><FriendChatPage /></ProtectedRoute>} />
             {/* Protected routes */}
             <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
               <Route index element={<Navigate to="/dashboard" />} />

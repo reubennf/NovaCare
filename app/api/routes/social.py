@@ -198,3 +198,213 @@ def get_friend_messages(friend_id: str, user_id: str = Depends(get_current_user_
         .order("created_at")\
         .execute()
     return result.data
+
+from pydantic import BaseModel
+from typing import Optional
+
+class LocationUpdate(BaseModel):
+    latitude: float
+    longitude: float
+    visible: bool = True
+
+class EventCreate(BaseModel):
+    title: str
+    description: Optional[str] = None
+    category: str = 'social'
+    starts_at: str
+    ends_at: Optional[str] = None
+    venue_name: Optional[str] = None
+    address: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
+class BumpRequest(BaseModel):
+    friend_id: str
+    latitude: float
+    longitude: float
+
+# --- Location ---
+
+@router.post("/location")
+def update_location(payload: LocationUpdate, user_id: str = Depends(get_current_user_id)):
+    """Update user's real-time location."""
+    import geohash2
+    from datetime import datetime
+    
+    gh = geohash2.encode(payload.latitude, payload.longitude, precision=6)
+    
+    existing = supabase.table("user_presence").select("user_id").eq("user_id", user_id).execute()
+    data = {
+        "user_id": user_id,
+        "latitude": payload.latitude,
+        "longitude": payload.longitude,
+        "geohash": gh,
+        "visibility_status": "visible" if payload.visible else "hidden",
+        "updated_at": datetime.utcnow().isoformat()
+    }
+    
+    if existing.data:
+        supabase.table("user_presence").update(data).eq("user_id", user_id).execute()
+    else:
+        supabase.table("user_presence").insert(data).execute()
+    
+    return {"message": "Location updated"}
+
+@router.get("/friends/locations")
+def get_friend_locations(user_id: str = Depends(get_current_user_id)):
+    """Get locations of friends who are visible."""
+    friend_ids = get_friend_ids(user_id)
+    if not friend_ids:
+        return []
+    
+    result = supabase.table("user_presence")\
+        .select("user_id, latitude, longitude, updated_at")\
+        .in_("user_id", friend_ids)\
+        .eq("visibility_status", "visible")\
+        .execute()
+    
+    # Enrich with profile names
+    locations = []
+    for loc in (result.data or []):
+        profile = supabase.table("profiles")\
+            .select("preferred_name, avatar_url")\
+            .eq("id", loc["user_id"])\
+            .execute()
+        name = profile.data[0].get("preferred_name", "Friend") if profile.data else "Friend"
+        locations.append({**loc, "name": name})
+    
+    return locations
+
+@router.post("/location/hide")
+def hide_location(user_id: str = Depends(get_current_user_id)):
+    supabase.table("user_presence").update({
+        "visibility_status": "hidden"
+    }).eq("user_id", user_id).execute()
+    return {"message": "Location hidden"}
+
+# --- Create event ---
+
+@router.post("/events/create")
+def create_event(payload: EventCreate, user_id: str = Depends(get_current_user_id)):
+    """Let users create their own community events."""
+    profile = supabase.table("profiles").select("preferred_name").eq("id", user_id).execute()
+    organizer = profile.data[0].get("preferred_name", "Community member") if profile.data else "Community member"
+    
+    result = supabase.table("community_events").insert({
+        "title": payload.title,
+        "description": payload.description,
+        "category": payload.category,
+        "starts_at": payload.starts_at,
+        "ends_at": payload.ends_at,
+        "venue_name": payload.venue_name,
+        "address": payload.address,
+        "latitude": payload.latitude,
+        "longitude": payload.longitude,
+        "organizer_name": organizer,
+        "source": "internal",
+        "status": "active"
+    }).execute()
+    
+    # Auto-RSVP creator as joined
+    if result.data:
+        supabase.table("event_rsvps").insert({
+            "event_id": result.data[0]["id"],
+            "user_id": user_id,
+            "status": "joined"
+        }).execute()
+    
+    return result.data[0] if result.data else {}
+
+# --- BUMP ---
+
+@router.post("/bump")
+def bump_friend(payload: BumpRequest, user_id: str = Depends(get_current_user_id)):
+    """
+    Register a BUMP between two friends meeting in person.
+    Both users must be friends and within 50 metres of each other.
+    """
+    import math
+    from datetime import datetime, timedelta
+    from app.services.mission_service import award_points
+
+    # Must be friends
+    friend_ids = get_friend_ids(user_id)
+    if payload.friend_id not in friend_ids:
+        raise HTTPException(status_code=403, detail="You can only bump friends")
+
+    # Check friend's location
+    friend_loc = supabase.table("user_presence")\
+        .select("latitude, longitude, updated_at")\
+        .eq("user_id", payload.friend_id)\
+        .execute()
+    
+    if not friend_loc.data:
+        raise HTTPException(status_code=400, detail="Friend location not available")
+    
+    floc = friend_loc.data[0]
+    
+    # Check location is recent (within 5 minutes)
+    updated = datetime.fromisoformat(floc["updated_at"].replace("Z", "+00:00")).replace(tzinfo=None)
+    if (datetime.utcnow() - updated).total_seconds() > 300:
+        raise HTTPException(status_code=400, detail="Friend location is outdated")
+
+    # Calculate distance in metres (Haversine)
+    R = 6371000
+    lat1, lon1 = math.radians(payload.latitude), math.radians(payload.longitude)
+    lat2, lon2 = math.radians(floc["latitude"]), math.radians(floc["longitude"])
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+    a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
+    distance = R * 2 * math.asin(math.sqrt(a))
+
+    if distance > 50:
+        raise HTTPException(status_code=400, detail=f"Too far apart ({int(distance)}m). Must be within 50m to BUMP!")
+
+    # Check not bumped same friend in last hour
+    one_hour_ago = (datetime.utcnow() - timedelta(hours=1)).isoformat()
+    recent = supabase.table("bump_events")\
+        .select("id")\
+        .or_(f"and(user_id_1.eq.{user_id},user_id_2.eq.{payload.friend_id}),and(user_id_1.eq.{payload.friend_id},user_id_2.eq.{user_id})")\
+        .gte("bumped_at", one_hour_ago)\
+        .execute()
+    
+    if recent.data:
+        raise HTTPException(status_code=400, detail="Already bumped this friend recently!")
+
+    # Record bump
+    supabase.table("bump_events").insert({
+        "user_id_1": user_id,
+        "user_id_2": payload.friend_id,
+        "latitude": payload.latitude,
+        "longitude": payload.longitude,
+        "points_awarded": 20
+    }).execute()
+
+    # Award 20 points to BOTH users
+    award_points(user_id, 20, "mission", note="BUMP with friend!")
+    award_points(payload.friend_id, 20, "mission", note="BUMP with friend!")
+
+    # Send notification to friend
+    from app.services.notification_service import send_notification
+    send_notification(
+        user_id=payload.friend_id,
+        title="You got bumped!",
+        body="You and a friend just met up — you both earned 20 points!",
+        payload={"type": "bump", "from_user": user_id}
+    )
+
+    return {
+        "message": "BUMP successful!",
+        "distance_metres": int(distance),
+        "points_awarded": 20
+    }
+
+@router.get("/bumps")
+def get_bump_history(user_id: str = Depends(get_current_user_id)):
+    result = supabase.table("bump_events")\
+        .select("*")\
+        .or_(f"user_id_1.eq.{user_id},user_id_2.eq.{user_id}")\
+        .order("bumped_at", desc=True)\
+        .limit(20)\
+        .execute()
+    return result.data or []
