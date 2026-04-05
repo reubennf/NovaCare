@@ -109,11 +109,11 @@ export default function DashboardPage() {
   const companionName = companion?.name || 'Sushi'
   const mood = getMoodLabel(companion?.mood_state)
 
-  // Which bubbles to show
-  const activeBubbles = Object.entries(BUBBLE_CONFIG).filter(
-    ([type]) => careStatus?.needs_care?.[type]
-  )
-//   const activeBubbles = Object.entries(BUBBLE_CONFIG)
+//   // Which bubbles to show
+//   const activeBubbles = Object.entries(BUBBLE_CONFIG).filter(
+//     ([type]) => careStatus?.needs_care?.[type]
+//   )
+  const activeBubbles = Object.entries(BUBBLE_CONFIG)
 
   if (loading) return (
     <div style={{
@@ -287,6 +287,7 @@ export default function DashboardPage() {
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
+            zIndex: 10,
             gap: 8
           }}
         >

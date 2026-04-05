@@ -256,6 +256,7 @@ export default function MissionsPage() {
           <PetWithAccessories
             species={companion?.species}
             size={180}
+            style={{right: -20}}
           />
 
         {/* Mission list - max 3 */}

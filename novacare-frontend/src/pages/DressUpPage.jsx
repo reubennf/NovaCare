@@ -166,7 +166,7 @@ export default function DressUpPage() {
 
         <div style={{ marginBottom: 8 }}>
           <span style={{ fontSize: 18, fontWeight: 700, color: 'black' }}>Nova</span>
-          <span style={{ fontSize: 18, fontWeight: 700, color: '#20A090' }}>Pet</span>
+          <span style={{ fontSize: 18, fontWeight: 700, color: '#20A090' }}>Care</span>
         </div>
 
         <h1 style={{ fontSize: 26, fontWeight: 400, margin: '0 0 4px', color: 'black' }}>
@@ -180,7 +180,7 @@ export default function DressUpPage() {
       {/* Pet + Wardrobe */}
       <div style={{
         display: 'flex',
-        alignItems: 'flex-end',
+        alignItems: 'center',
         justifyContent: 'center',
         padding: '20px 24px 0',
         gap: 16,
@@ -193,17 +193,31 @@ export default function DressUpPage() {
         }}>
           <PetWithAccessories
             species={companion?.species}
-            size={160}
+            size={300}
           />
         </div>
 
         {/* Wardrobe */}
         <div style={{
-          fontSize: 100,
-          lineHeight: 1,
+          width: 300,
+          height: 300,
+          top: 50,
           filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.1))'
         }}>
-          🗄️
+          <img
+        src="/wardrobe.png"
+        alt="wardrobe"
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'contain',
+          position: 'relative',
+          right: 10,
+          top: 50,
+          zIndex: 2
+        }}
+        onError={e => { e.target.style.display = 'none' }}
+      />
         </div>
       </div>
 

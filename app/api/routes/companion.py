@@ -417,3 +417,132 @@ def update_equipment(payload: dict, user_id: str = Depends(get_current_user_id))
         supabase.table("companion_equipment").insert(payload).execute()
 
     return {"message": "Equipment updated"}
+
+@router.post("/chat/async")
+def chat_async(payload: ChatMessage, user_id: str = Depends(get_current_user_id)):
+    """
+    Non-blocking chat endpoint.
+    Saves user message immediately, processes AI response in background thread.
+    Supabase Realtime pushes the assistant reply to the frontend when ready.
+    """
+    import threading
+    import uuid
+    from app.services.chat_service import build_system_prompt, get_recent_messages
+    from app.core.config import settings
+    from openai import OpenAI
+    from datetime import datetime
+
+    # Get companion and profile
+    companion_result = supabase.table("companions").select("*").eq("user_id", user_id).execute()
+    if not companion_result.data:
+        raise HTTPException(status_code=404, detail="No companion found")
+    companion = companion_result.data[0]
+
+    profile_result = supabase.table("profiles").select("*").eq("id", user_id).execute()
+    user_profile = profile_result.data[0] if profile_result.data else {}
+
+    memories_result = supabase.table("user_memories").select("*").eq("user_id", user_id).order("importance", desc=True).limit(10).execute()
+    memories = memories_result.data or []
+
+    # Get or create thread
+    thread_id = payload.thread_id
+    if not thread_id:
+        thread_result = supabase.table("conversation_threads").insert({
+            "user_id": user_id,
+            "thread_type": "companion",
+            "title": "Chat with " + companion["name"]
+        }).execute()
+        thread_id = thread_result.data[0]["id"]
+
+    # Save user message immediately
+    user_msg_id = str(uuid.uuid4())
+    supabase.table("conversation_messages").insert({
+        "id": user_msg_id,
+        "thread_id": thread_id,
+        "sender_type": "user",
+        "sender_user_id": user_id,
+        "body": payload.message
+    }).execute()
+
+    # Save a placeholder assistant message with "thinking" status
+    assistant_msg_id = str(uuid.uuid4())
+    supabase.table("conversation_messages").insert({
+        "id": assistant_msg_id,
+        "thread_id": thread_id,
+        "sender_type": "assistant",
+        "body": None,
+        "metadata": {"status": "thinking"}
+    }).execute()
+
+    def process_in_background():
+        try:
+            client = OpenAI(
+                api_key=settings.SEA_LION_API_KEY,
+                base_url="https://api.sea-lion.ai/v1"
+            )
+
+            system_prompt = build_system_prompt(companion, user_profile, memories)
+            history = get_recent_messages(thread_id, limit=10)
+
+            if not history:
+                messages = [{"role": "user", "content": f"{system_prompt}\n\nUser message: {payload.message}"}]
+            else:
+                history[0]["content"] = f"{system_prompt}\n\nUser message: {history[0]['content']}"
+                # Remove trailing user messages
+                while history and history[-1]["role"] == "user":
+                    history.pop()
+                history.append({"role": "user", "content": payload.message})
+                messages = history
+
+            response = client.chat.completions.create(
+                model="aisingapore/Gemma-SEA-LION-v4-27B-IT",
+                messages=messages,
+                max_tokens=300,
+                extra_body={"chat_template_kwargs": {"thinking_mode": "off"}}
+            )
+            reply = response.choices[0].message.content
+
+            # Update the placeholder with the real reply
+            supabase.table("conversation_messages").update({
+                "body": reply,
+                "metadata": {"status": "done"}
+            }).eq("id", assistant_msg_id).execute()
+
+            # Update thread and companion
+            supabase.table("conversation_threads").update({
+                "last_message_at": datetime.utcnow().isoformat()
+            }).eq("id", thread_id).execute()
+
+            new_affection = min(100, companion["affection"] + 2)
+            supabase.table("companions").update({
+                "affection": new_affection,
+                "updated_at": datetime.utcnow().isoformat()
+            }).eq("id", companion["id"]).execute()
+
+            # Sentiment analysis
+            try:
+                from app.services.chat_service import analyze_sentiment
+                analysis = analyze_sentiment(payload.message)
+                analysis["message_id"] = user_msg_id
+                analysis["analyzed_at"] = datetime.utcnow().isoformat()
+                supabase.table("message_analysis").insert(analysis).execute()
+            except Exception:
+                pass
+
+        except Exception as e:
+            # Update placeholder with error message
+            supabase.table("conversation_messages").update({
+                "body": "Sorry, I had a little trouble there. Try again!",
+                "metadata": {"status": "error"}
+            }).eq("id", assistant_msg_id).execute()
+
+    # Fire background thread
+    thread = threading.Thread(target=process_in_background, daemon=True)
+    thread.start()
+
+    return {
+        "thread_id": thread_id,
+        "user_message_id": user_msg_id,
+        "assistant_message_id": assistant_msg_id,
+        "status": "processing"
+    }

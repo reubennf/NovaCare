@@ -3,6 +3,8 @@ import api from '../lib/api'
 import { useNavigate, Link } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import PetWithAccessories from '../components/PetWithAccessories'
+import { useEffect, useRef, useState } from 'react'
+import { supabase } from '../lib/supabase'
 import {
   getChatMessages,
   getChatThreadId,
@@ -23,6 +25,7 @@ export default function CompanionPage() {
   const [creating, setCreating] = useState(false)
   const [createForm, setCreateForm] = useState({ name: 'Sushi', species: 'dog', personality: 'cheerful' })
   const messagesEndRef = useRef(null)
+  const realtimeRef = useRef(null)
   const [suggestions, setSuggestions] = useState([])
   const getPetImage = (species) => {
     switch (species) {
@@ -79,7 +82,64 @@ export default function CompanionPage() {
       setLoading(false)
     }
   }
+  useEffect(() => {
+    if (!threadId) return
 
+    // Unsubscribe from previous channel
+    if (realtimeRef.current) {
+      supabase.removeChannel(realtimeRef.current)
+    }
+
+    // Subscribe to new messages on this thread
+    const channel = supabase
+      .channel(`thread-${threadId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'conversation_messages',
+          filter: `thread_id=eq.${threadId}`
+        },
+        (payload) => {
+          const updated = payload.new
+          // Only handle assistant messages that are done
+          if (updated.sender_type === 'assistant' && updated.metadata?.status === 'done') {
+            setMessages(prev => prev.map(m =>
+              m.id === updated.id
+                ? { ...m, content: updated.body, thinking: false }
+                : m
+            ))
+            setSending(false)
+            updateMessages(prev => prev.map(m =>
+              m.id === updated.id
+                ? { ...m, content: updated.body, thinking: false }
+                : m
+            ))
+
+            // Fetch suggestions
+            api.post('/companion/chat/suggestions', {
+              message: updated.body,
+              thread_id: threadId
+            }).then(res => {
+              setSuggestions(res.data.suggestions || [])
+            }).catch(() => {
+              setSuggestions(['Tell me more', 'I feel better', 'What should I do?'])
+            })
+
+            // Refresh companion
+            api.get('/companion/').then(res => setCompanion(res.data))
+          }
+        }
+      )
+      .subscribe()
+
+    realtimeRef.current = channel
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [threadId])
   const handleCreateCompanion = async () => {
     try {
       const res = await api.post('/companion/', createForm)
@@ -96,96 +156,49 @@ export default function CompanionPage() {
     setInput('')
     setSuggestions([])
     const time = getTime()
-    updateMessages(prev => [...prev, { role: 'user', content: message, time }])
     setSending(true)
 
+    // Add user message to UI immediately
+    updateMessages(prev => [...prev, {
+      role: 'user',
+      content: message,
+      time,
+      id: `user-${Date.now()}`
+    }])
+
+    // Add thinking placeholder
+    const thinkingId = `thinking-${Date.now()}`
+    updateMessages(prev => [...prev, {
+      role: 'assistant',
+      content: '',
+      time: getTime(),
+      id: thinkingId,
+      thinking: true
+    }])
+
     try {
-      const { supabase } = await import('../lib/supabase')
-      const { data: { session } } = await supabase.auth.getSession()
-      const authToken = session?.access_token
+      const res = await api.post('/companion/chat/async', {
+        message,
+        thread_id: threadId || undefined
+      })
 
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/companion/chat/stream`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${authToken}`
-          },
-          body: JSON.stringify({
-            message,
-            thread_id: threadId || undefined
-          })
-        }
-      )
+      // Update thread ID so Realtime subscribes
+      if (!threadId) setThreadId(res.data.thread_id)
 
-      const reader = response.body.getReader()
-      const decoder = new TextDecoder()
-      let currentReply = ''
-      let newThreadId = threadId
-      const streamingMsgId = Date.now()
-
-      updateMessages(prev => [...prev, {
-        role: 'assistant',
-        content: '',
-        time: getTime(),
-        id: streamingMsgId
-      }])
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        const chunk = decoder.decode(value)
-        const lines = chunk.split('\n')
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue
-          try {
-            const data = JSON.parse(line.slice(6))
-
-            if (data.type === 'meta') {
-              newThreadId = data.thread_id
-              updateThreadId(data.thread_id)
-            }
-
-            if (data.type === 'token') {
-              currentReply += data.content
-              updateMessages(prev => prev.map(m =>
-                m.id === streamingMsgId
-                  ? { ...m, content: currentReply }
-                  : m
-              ))
-            }
-
-            if (data.type === 'done') {
-              setSending(false)
-              try {
-                const suggestRes = await api.post('/companion/chat/suggestions', {
-                  message: currentReply,
-                  thread_id: newThreadId
-                })
-                setSuggestions(suggestRes.data.suggestions || [])
-              } catch (e) {
-                setSuggestions(['Tell me more', 'I feel better', 'What should I do?'])
-              }
-              const companionRes = await api.get('/companion/')
-              setCompanion(companionRes.data)
-            }
-
-          } catch (e) {
-            // skip malformed chunks
-          }
-        }
-      }
+      // Update the thinking placeholder with the real message ID
+      updateMessages(prev => prev.map(m =>
+        m.id === thinkingId
+          ? { ...m, id: res.data.assistant_message_id }
+          : m
+      ))
 
     } catch (err) {
       console.error(err)
-      updateMessages(prev => [...prev, {
-        role: 'assistant',
-        content: 'Sorry, I had trouble responding. Try again!',
-        time: getTime()
-      }])
+      updateMessages(prev => prev.map(m =>
+        m.id === thinkingId
+          ? { ...m, content: 'Sorry, I had trouble responding!', thinking: false }
+          : m
+      ))
       setSending(false)
     }
   }
@@ -366,12 +379,13 @@ export default function CompanionPage() {
         alignItems: 'flex-end',
         position: 'relative',
         flexShrink: 0,
-        height: 230,
+        height: 250,
         marginBottom: 8
       }}>
         <PetWithAccessories
           species={companion?.species}
           size={450}
+          style={{ top: 80, left:100 }}
         />
         {/* Shadow */}
         <div style={{
@@ -408,13 +422,12 @@ export default function CompanionPage() {
         )}
 
         {messages.map((msg, i) => (
-          <div key={i} style={{
+          <div key={msg.id || i} style={{
             display: 'flex',
             flexDirection: 'column',
             alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start',
             marginBottom: 8
           }}>
-            {/* Bubble */}
             <div style={{
               maxWidth: '75%',
               padding: '10px 14px',
@@ -423,28 +436,29 @@ export default function CompanionPage() {
               color: msg.role === 'user' ? 'white' : '#000E08',
               fontSize: 12,
               lineHeight: '1.5',
-              letterSpacing: 0.12
             }}>
-              <ReactMarkdown
-                components={{
-                  p: ({ children }) => <span>{children}</span>,
-                  strong: ({ children }) => <strong style={{ fontWeight: 700 }}>{children}</strong>,
-                  em: ({ children }) => <em>{children}</em>,
-                }}
-              >
-                {msg.content}
-              </ReactMarkdown>
+              {msg.thinking ? (
+                <span style={{ opacity: 0.67, letterSpacing: 4 }}>● ● ●</span>
+              ) : (
+                <ReactMarkdown
+                  components={{
+                    p: ({ children }) => <span>{children}</span>,
+                    strong: ({ children }) => <strong style={{ fontWeight: 700 }}>{children}</strong>,
+                  }}
+                >
+                  {msg.content}
+                </ReactMarkdown>
+              )}
             </div>
-            {/* Timestamp */}
-            <div style={{
-              fontSize: 10,
-              color: '#797C7B',
-              marginTop: 2,
-              paddingLeft: msg.role === 'user' ? 0 : 4,
-              paddingRight: msg.role === 'user' ? 4 : 0,
-            }}>
-              {msg.time}
-            </div>
+            {!msg.thinking && (
+              <div style={{
+                fontSize: 10,
+                color: '#797C7B',
+                marginTop: 2,
+              }}>
+                {msg.time}
+              </div>
+            )}
           </div>
         ))}
 
