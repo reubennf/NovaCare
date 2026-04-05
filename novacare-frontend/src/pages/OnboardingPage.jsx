@@ -65,17 +65,17 @@ export default function OnboardingPage() {
 
   const getNextStep = () => {
     if (step === 2 && answers.healthhub_sync === false) return 4
-    if (step === 4 && answers.takes_daily_medication === false) return 6
-    if (step === 5 && answers.has_support_person === false) return 7
+    if (step === 4 && answers.takes_daily_medication === false) return 5
+    if (step === 5 && answers.has_support_person === false) return 6
     return step + 1
-  }
+    }
 
   const getPrevStep = () => {
     if (step === 4 && answers.healthhub_sync === false) return 2
-    if (step === 6 && answers.takes_daily_medication === false) return 4
-    if (step === 7 && answers.has_support_person === false) return 5
+    if (step === 5 && answers.takes_daily_medication === false) return 4
+    if (step === 6 && answers.has_support_person === false) return 5
     return step - 1
-  }
+    }
 
   // Step labels for mapping
   // 1: Accessibility
@@ -286,7 +286,7 @@ export default function OnboardingPage() {
       <div style={{ padding: '48px 24px 0' }}>
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <span style={{ fontSize: 18, fontWeight: 700, color: 'black' }}>Nova</span>
-          <span style={{ fontSize: 18, fontWeight: 700, color: '#20A090' }}>Pet</span>
+          <span style={{ fontSize: 18, fontWeight: 700, color: '#20A090' }}>Care</span>
         </div>
 
         {/* Progress bar */}
@@ -324,7 +324,7 @@ export default function OnboardingPage() {
         {step === 1 && !extraStep && (
           <div>
             <h1 style={{ fontSize: 28, fontWeight: 700, color: 'black', marginBottom: 8 }}>
-              How would you like<br />to use <span style={{ color: '#20A090' }}>NovaPet</span>?
+              How would you like<br />to use <span style={{ color: '#20A090' }}>NovaCare</span>?
             </h1>
             <p style={{ fontSize: 14, color: '#888', marginBottom: 24 }}>
               You can change these anytime
