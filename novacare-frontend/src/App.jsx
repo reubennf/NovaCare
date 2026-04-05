@@ -22,6 +22,7 @@ import EventsPage from './pages/EventsPage'
 import ProfilePage from './pages/ProfilePage'
 import Layout from './components/Layout'
 import DressUpPage from './pages/DressUpPage'
+import DecoratePage from './pages/DecoratePage'
 
 
 function ProtectedRoute({ children }) {
@@ -84,7 +85,7 @@ export default function App() {
             <Route path="/groom" element={<ProtectedRoute><GroomPage /></ProtectedRoute>} />
             <Route path="/feed" element={<ProtectedRoute><FeedPage /></ProtectedRoute>} />
             <Route path="/dressup" element={<ProtectedRoute><DressUpPage /></ProtectedRoute>} />
-
+            <Route path="/decorate" element={<ProtectedRoute><DecoratePage /></ProtectedRoute>} />
 
             {/* Protected routes */}
             <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>

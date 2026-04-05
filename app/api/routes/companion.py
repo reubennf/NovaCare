@@ -546,3 +546,29 @@ def chat_async(payload: ChatMessage, user_id: str = Depends(get_current_user_id)
         "assistant_message_id": assistant_msg_id,
         "status": "processing"
     }
+
+@router.get("/room")
+def get_room(user_id: str = Depends(get_current_user_id)):
+    result = supabase.table("room_items")\
+        .select("*")\
+        .eq("user_id", user_id)\
+        .execute()
+    return result.data or []
+
+@router.post("/room/buy")
+def buy_room_item(payload: dict, user_id: str = Depends(get_current_user_id)):
+    from app.services.mission_service import award_points
+    item_id = payload.get("item_id")
+    cost = payload.get("cost", 0)
+
+    # Deduct points
+    award_points(user_id, -cost, "mission", note=f"Bought room item: {item_id}")
+
+    # Add to inventory
+    supabase.table("room_items").insert({
+        "user_id": user_id,
+        "item_id": item_id,
+        "placed": True
+    }).execute()
+
+    return {"message": "Item purchased!"}
