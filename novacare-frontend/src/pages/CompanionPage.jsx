@@ -3,7 +3,6 @@ import api from '../lib/api'
 import { useNavigate, Link } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import PetWithAccessories from '../components/PetWithAccessories'
-import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import {
   getChatMessages,

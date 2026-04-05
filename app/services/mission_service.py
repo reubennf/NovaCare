@@ -20,12 +20,15 @@ def award_points(user_id: str, points: int, source_type: str, source_id: str = N
         "note": note
     }).execute()
 
-def assign_daily_missions(user_id: str, target_date: date = None) -> list:
-    """Assign missions for a given day if not already assigned."""
+def assign_daily_missions(user_id: str, target_date=None) -> list:
+    from datetime import date, datetime
+    from app.core.config import settings
+    from openai import OpenAI
+
     if not target_date:
         target_date = date.today()
 
-    # Check if missions already assigned for today
+    # Check if already assigned
     existing = supabase.table("user_missions")\
         .select("id")\
         .eq("user_id", user_id)\
@@ -35,7 +38,7 @@ def assign_daily_missions(user_id: str, target_date: date = None) -> list:
     if existing.data:
         return existing.data
 
-    # Get all active templates
+    # Get templates
     templates = supabase.table("mission_templates")\
         .select("*")\
         .eq("active", True)\
@@ -44,20 +47,69 @@ def assign_daily_missions(user_id: str, target_date: date = None) -> list:
     if not templates.data:
         return []
 
-    # Pick 3 random missions for the day
+    import random
     selected = random.sample(templates.data, min(3, len(templates.data)))
+
+    # Get user profile for personalisation
+    profile = supabase.table("profiles")\
+        .select("preferred_name, full_name")\
+        .eq("id", user_id)\
+        .execute()
+    name = profile.data[0].get("preferred_name") or "friend" if profile.data else "friend"
+
+    # Get health conditions
+    conditions = supabase.table("user_health_conditions")\
+        .select("condition")\
+        .eq("user_id", user_id)\
+        .execute()
+    condition_list = [c["condition"] for c in (conditions.data or [])]
+
+    # Generate engaging descriptions with SEA-LION
+    client = OpenAI(
+        api_key=settings.SEA_LION_API_KEY,
+        base_url="https://api.sea-lion.ai/v1"
+    )
 
     missions = []
     for template in selected:
-        mission = {
+        # Generate a short engaging mission description
+        try:
+            conditions_text = ", ".join(condition_list) if condition_list else "none"
+            response = client.chat.completions.create(
+                model="aisingapore/Gemma-SEA-LION-v4-27B-IT",
+                messages=[{
+                    "role": "user",
+                    "content": f"""Generate a short, warm, encouraging mission description for an elderly person in Singapore.
+
+Mission category: {template['category']}
+Base mission: {template['title']}
+User name: {name}
+Health conditions: {conditions_text}
+
+Rules:
+- Max 8 words
+- Actionable and specific (e.g. "Walk to the park and back")
+- Warm and encouraging tone
+- Occasional light Singlish is fine
+- No punctuation at end
+- Return ONLY the mission text, nothing else"""
+                }],
+                max_tokens=30,
+                extra_body={"chat_template_kwargs": {"thinking_mode": "off"}}
+            )
+            description = response.choices[0].message.content.strip().strip('"').strip("'")
+        except Exception:
+            description = template["title"]
+
+        missions.append({
             "user_id": user_id,
             "mission_template_id": template["id"],
             "scheduled_for": str(target_date),
             "status": "assigned",
             "target_value": 1,
-            "generated_reason": f"Daily {template['category']} mission"
-        }
-        missions.append(mission)
+            "generated_reason": description,
+            "category": template["category"]
+        })
 
     result = supabase.table("user_missions").insert(missions).execute()
     return result.data or []

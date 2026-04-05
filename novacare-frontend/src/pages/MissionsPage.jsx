@@ -258,8 +258,8 @@ export default function MissionsPage() {
             size={180}
             style={{right: -20}}
           />
-
-        {/* Mission list - max 3 */}
+        </div>
+        {/* Mission list */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {missions.slice(0, 3).map(mission => {
             const done = mission.status === 'completed'
@@ -267,7 +267,7 @@ export default function MissionsPage() {
             return (
               <div
                 key={mission.id}
-                onClick={() => !done && handleComplete(mission.id)}
+                onClick={() => !done && !inProgress && handleComplete(mission.id)}
                 style={{
                   background: done ? 'rgba(32,160,144,0.06)' : 'white',
                   borderRadius: 16,
@@ -277,38 +277,74 @@ export default function MissionsPage() {
                   justifyContent: 'space-between',
                   cursor: done ? 'default' : 'pointer',
                   boxShadow: done ? 'none' : '0px 2px 8px rgba(0,0,0,0.06)',
-                  border: done ? '1px solid rgba(32,160,144,0.15)' : '1px solid transparent',
-                  transition: 'all 0.2s'
+                  border: done ? '1px solid rgba(32,160,144,0.20)' : '1px solid #F0F0F0',
+                  transition: 'all 0.2s',
+                  opacity: inProgress ? 0.6 : 1
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span style={{ fontSize: 20 }}>
-                    {categoryEmoji[mission.category] || '⭐'}
-                  </span>
-                  <span style={{
-                    fontSize: 15,
-                    color: done ? 'rgba(0,0,0,0.4)' : 'black',
-                    fontWeight: 500,
-                    textDecoration: done ? 'line-through' : 'none'
+                {/* Left: emoji + text */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }}>
+                  <div style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    background: done ? 'rgba(32,160,144,0.1)' : '#F5F5F5',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 20,
+                    flexShrink: 0
                   }}>
-                    {mission.generated_reason || mission.title || 'Daily mission'}
-                  </span>
+                    {done ? '✅' : (categoryEmoji[mission.category] || '⭐')}
+                  </div>
+                  <div>
+                    <span style={{
+                      fontSize: 14,
+                      color: done ? 'rgba(0,0,0,0.35)' : 'black',
+                      fontWeight: 500,
+                      textDecoration: done ? 'line-through' : 'none',
+                      display: 'block',
+                      lineHeight: 1.4
+                    }}>
+                      {mission.generated_reason || mission.title || 'Daily mission'}
+                    </span>
+                    {!done && (
+                      <span style={{
+                        fontSize: 11,
+                        color: '#20A090',
+                        fontWeight: 500
+                      }}>
+                        Tap to complete
+                      </span>
+                    )}
+                  </div>
                 </div>
 
+                {/* Right: status */}
                 {done ? (
-                  <span style={{
-                    color: '#20A090',
-                    fontSize: 14,
-                    fontWeight: 600
-                  }}>Done</span>
+                  <span style={{ color: '#20A090', fontSize: 13, fontWeight: 700, flexShrink: 0 }}>
+                    Done
+                  </span>
+                ) : inProgress ? (
+                  <span style={{ color: '#aaa', fontSize: 13, flexShrink: 0 }}>...</span>
                 ) : (
                   <div style={{
-                    width: 12,
-                    height: 12,
-                    borderRadius: 6,
-                    background: inProgress ? '#20A090' : '#20A090',
-                    opacity: inProgress ? 0.5 : 1
-                  }} />
+                    width: 28,
+                    height: 28,
+                    borderRadius: 14,
+                    border: '2px solid #20A090',
+                    flexShrink: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <div style={{
+                      width: 14,
+                      height: 14,
+                      borderRadius: 7,
+                      background: 'transparent'
+                    }} />
+                  </div>
                 )}
               </div>
             )
@@ -330,6 +366,5 @@ export default function MissionsPage() {
       </div>
 
     </div>
-  </div>
   )
 }
