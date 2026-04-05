@@ -79,7 +79,7 @@ def assign_daily_missions(user_id: str, target_date=None) -> list:
                 model="aisingapore/Gemma-SEA-LION-v4-27B-IT",
                 messages=[{
                     "role": "user",
-                    "content": f"""Generate a short, warm, encouraging mission description for an elderly person in Singapore.
+                    "content": f"""Generate a short, warm, encouraging mission for an elderly person in Singapore.
 
 Mission category: {template['category']}
 Base mission: {template['title']}
@@ -88,9 +88,7 @@ Health conditions: {conditions_text}
 
 Rules:
 - Max 8 words
-- Actionable and specific (e.g. "Walk to the park and back")
-- Warm and encouraging tone
-- Occasional light Singlish is fine
+- Only consists of actionable and specific (e.g. "Walk to the park and back, Drink a glass of water") or emotional (e.g. "Take a moment to enjoy the sunshine") tasks
 - No punctuation at end
 - Return ONLY the mission text, nothing else"""
                 }],
