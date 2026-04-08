@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.core.config import settings
-from app.api.routes import profiles, medications, companion, missions, caregiver, social, notifications, onboarding
+from app.api.routes import profile, medications, companion, missions, caregiver, social, notifications, onboarding
 from app.workers.scheduler import start_scheduler, stop_scheduler
 import logging
 
@@ -44,7 +44,7 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={"detail": "An unexpected error occurred"}
     )
 
-app.include_router(profiles.router)
+app.include_router(profile.router)
 app.include_router(medications.router)
 app.include_router(companion.router)
 app.include_router(missions.router)
