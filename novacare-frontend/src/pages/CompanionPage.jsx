@@ -4,6 +4,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import PetWithAccessories from '../components/PetWithAccessories'
 import { supabase } from '../lib/supabase'
+import LoadingScreen from '../components/LoadingScreen'
 import { useEquipment } from '../context/EquipmentContext'
 
 import {
@@ -206,18 +207,7 @@ export default function CompanionPage() {
     }
   }
 
-  if (loading) return (
-    <div style={{
-      width: 390,
-      height: 844,
-      margin: '0 auto',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center'
-    }}>
-      <p style={{ color: '#aaa', fontFamily: 'Inter' }}>Loading...</p>
-    </div>
-  )
+  if (loading) return <LoadingScreen message="Chat incoming..." />
 
   if (creating) return (
     <div style={{

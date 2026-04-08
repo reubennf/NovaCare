@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../lib/api'
 import PetWithAccessories from '../components/PetWithAccessories'
 import { useEquipment } from '../context/EquipmentContext'
-
+import LoadingScreen from '../components/LoadingScreen'
 
 const categoryEmoji = {
   walk: '🚶',
@@ -90,19 +90,7 @@ export default function MissionsPage() {
   const xpToNextLevel = companion ? (companion.level * 100) - companion.xp : 0
   const userName = profile?.preferred_name || profile?.full_name || 'there'
 
-  if (loading) return (
-    <div style={{
-      width: 390,
-      height: 844,
-      margin: '0 auto',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontFamily: 'Inter'
-    }}>
-      <p style={{ color: '#aaa' }}>Loading...</p>
-    </div>
-  )
+  if (loading) return <LoadingScreen message="Loading your missions..." />
 
   return (
     <div style={{

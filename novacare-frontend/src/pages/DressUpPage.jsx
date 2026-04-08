@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useEquipment } from '../context/EquipmentContext'
 import { ACCESSORIES } from '../lib/accessories'
 import PetWithAccessories from '../components/PetWithAccessories'
+import LoadingScreen from '../components/LoadingScreen'
 import api from '../lib/api'
 
 const WARDROBE_EMOJI = '🗄️'
@@ -84,19 +85,7 @@ export default function DressUpPage() {
     epic: '#9B59B6'
   }
 
-  if (loading) return (
-    <div style={{
-      width: 390,
-      height: 844,
-      margin: '0 auto',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontFamily: 'Inter'
-    }}>
-      <p style={{ color: '#aaa' }}>Loading...</p>
-    </div>
-  )
+  if (loading) return <LoadingScreen />
 
   return (
     <div style={{

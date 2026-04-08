@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useEquipment } from '../context/EquipmentContext'
+import LoadingScreen from '../components/LoadingScreen'
 
 import api from '../lib/api'
 
@@ -88,11 +89,7 @@ export default function DecoratePage() {
   const ownedItems = ROOM_ITEMS.filter(i => owned.includes(i.id))
   const companionName = companion?.name || 'Sushi'
 
-  if (loading) return (
-    <div style={{ width: 390, height: 844, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter' }}>
-      <p style={{ color: '#aaa' }}>Loading...</p>
-    </div>
-  )
+  if (loading) return <LoadingScreen />
 
   return (
     <div style={{ width: 390, height: 844, margin: '0 auto', background: 'white', fontFamily: 'Inter, sans-serif', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>

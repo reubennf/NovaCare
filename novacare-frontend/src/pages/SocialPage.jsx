@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../lib/api'
+import LoadingScreen from '../components/LoadingScreen'
 
 const TABS = ['Map', 'Friends', 'Events', 'Chat']
 
@@ -134,11 +135,7 @@ export default function SocialPage() {
     fontFamily: 'Inter', cursor: 'pointer', padding: '8px 16px'
   })
 
-  if (loading) return (
-    <div style={{ width: 390, height: 844, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter' }}>
-      <p style={{ color: '#aaa' }}>Loading...</p>
-    </div>
-  )
+  if (loading) return <LoadingScreen />
 
   return (
     <div style={{ width: 390, height: 844, margin: '0 auto', background: 'white', fontFamily: 'Inter', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>

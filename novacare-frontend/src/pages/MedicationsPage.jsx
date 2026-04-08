@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../lib/api'
+import LoadingScreen from '../components/LoadingScreen'
+
 
 const PRESET_MEDICATIONS = [
   { name: 'Amlodipine', dosage: '5mg', frequency: 'once_daily', times: ['08:00'], purpose: 'High blood pressure' },
@@ -179,11 +181,7 @@ export default function MedicationsPage() {
     fontSize: 14, fontFamily: 'Inter', boxSizing: 'border-box', outline: 'none', marginBottom: 10
   }
 
-  if (loading) return (
-    <div style={{ width: 390, height: 844, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter' }}>
-      <p style={{ color: '#aaa' }}>Loading...</p>
-    </div>
-  )
+  if (loading) return <LoadingScreen message="Loading your meds..." />
 
   return (
     <div style={{ width: 390, height: 844, margin: '0 auto', background: '#F8F9FA', fontFamily: 'Inter, sans-serif', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>

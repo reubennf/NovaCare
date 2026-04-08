@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../lib/api'
 import { useEquipment } from '../context/EquipmentContext'
-
+import LoadingScreen from '../components/LoadingScreen'
 
 const PET_OPTIONS = [
   { id: "cat",    label: "Whiskers", emoji: "🐱", description: "Calm & cozy companion" },
@@ -253,11 +253,7 @@ export default function ProfilePage() {
     setModal(null)
   }
 
-  if (loading) return (
-    <div style={{ width: 390, height: 844, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter' }}>
-      <div style={{ width: 32, height: 32, borderRadius: 16, border: '3px solid #20A090', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }} />
-    </div>
-  )
+  if (loading) return <LoadingScreen />
 
   if (!profile) return (
     <div style={{ width: 390, height: 844, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter' }}>

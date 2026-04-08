@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../lib/api'
 import PetWithAccessories from '../components/PetWithAccessories'
+import LoadingScreen from '../components/LoadingScreen'
+
 
 const FOOD_ITEMS = [
   { id: 'bone', emoji: '🦴', name: 'Bone', cost: 10, energy: 10 },
@@ -133,19 +135,7 @@ export default function FeedPage() {
 
   const companionName = companion?.name || 'Sushi'
 
-  if (loading) return (
-    <div style={{
-      width: 390,
-      height: 844,
-      margin: '0 auto',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontFamily: 'Inter'
-    }}>
-      <p style={{ color: '#aaa' }}>Loading...</p>
-    </div>
-  )
+  if (loading) return <LoadingScreen message="Finding yummy food..." />
 
   return (
     <div

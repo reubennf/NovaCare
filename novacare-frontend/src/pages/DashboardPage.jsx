@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../lib/api'
 import PetWithAccessories from '../components/PetWithAccessories'
+import LoadingScreen from '../components/LoadingScreen'
 import { useEquipment } from '../context/EquipmentContext'
 
 
@@ -120,19 +121,7 @@ export default function DashboardPage() {
   )
 //   const activeBubbles = Object.entries(BUBBLE_CONFIG)
 
-  if (loading) return (
-    <div style={{
-      width: 390,
-      height: 844,
-      margin: '0 auto',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontFamily: 'Inter'
-    }}>
-      <p style={{ color: '#aaa' }}>Loading...</p>
-    </div>
-  )
+  if (loading) return <LoadingScreen message="Getting things ready..." />
 
   return (
     <div style={{

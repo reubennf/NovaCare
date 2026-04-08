@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../lib/api'
+import LoadingScreen from '../components/LoadingScreen'
 
 const LEAGUES = [
   { name: 'Bronze', color: '#CD7F32', gem: '🟤' },
@@ -43,19 +44,7 @@ export default function RanksPage() {
 
   const currentLeagueIndex = LEAGUES.findIndex(l => l.name === data?.league) ?? 0
 
-  if (loading) return (
-    <div style={{
-      width: 390,
-      height: 844,
-      margin: '0 auto',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontFamily: 'Inter'
-    }}>
-      <p style={{ color: '#aaa' }}>Loading...</p>
-    </div>
-  )
+  if (loading) return <LoadingScreen message="Fetching the leaderboard..." />
 
   return (
     <div style={{

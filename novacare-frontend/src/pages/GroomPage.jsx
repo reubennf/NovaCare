@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../lib/api'
+import LoadingScreen from '../components/LoadingScreen'
 
 
 const TOOLS = [
@@ -50,6 +51,7 @@ export default function GroomPage() {
   const containerRef = useRef(null)
   const sparkleId = useRef(0)
   const isDraggingRef = useRef(false)
+  const [loading, setLoading] = useState(true)
 
   const getPetImage = (species) => {
     switch (species) {
@@ -60,10 +62,12 @@ export default function GroomPage() {
       default: return '/sushi.png'
     }
   }
-
   useEffect(() => {
-    api.get('/companion/').then(res => setCompanion(res.data)).catch(() => {})
-  }, [])
+    api.get('/companion/')
+        .then(res => setCompanion(res.data))
+        .catch(() => {})
+        .finally(() => setLoading(false))
+    }, [])
 
   const addSparkles = (x, y, tool) => {
     // Only 1 sparkle at a time, not 3
@@ -171,7 +175,7 @@ export default function GroomPage() {
   }
 
   const companionName = companion?.name || 'Sushi'
-
+  if (loading) return <LoadingScreen message="Preparing some soap..." />
   return (
     <div
       ref={containerRef}
