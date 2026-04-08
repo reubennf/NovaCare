@@ -7,6 +7,7 @@ from datetime import datetime
 import uuid
 from fastapi.responses import StreamingResponse
 import json
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/companion", tags=["companion"])
 
