@@ -37,7 +37,7 @@ export default function SocialPage() {
         api.get('/social/friends'),
         api.get('/social/events'),
         api.get('/social/my-events'),
-        api.get('/profile/me'),
+        api.get('/profile/'),
         api.get('/social/bumps'),
       ])
       if (friendsRes.status === 'fulfilled') setFriends(friendsRes.value.data)

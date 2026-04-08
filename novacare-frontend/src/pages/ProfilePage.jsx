@@ -110,7 +110,7 @@ export default function ProfilePage() {
   const fetchProfile = async () => {
     try {
       const [profileRes, companionRes] = await Promise.allSettled([
-        api.get('/profile/me'),
+        api.get('/profile/'),
         api.get('/companion/'),
       ])
       

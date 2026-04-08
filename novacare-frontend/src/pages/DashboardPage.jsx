@@ -78,7 +78,7 @@ export default function DashboardPage() {
   const fetchData = async () => {
     try {
         const [profileRes, companionRes, careRes] = await Promise.allSettled([
-        api.get('/profile/me'),
+        api.get('/profile/'),
         api.get('/companion/'),
         api.get('/companion/care/status'),
         ])

@@ -51,7 +51,7 @@ export default function MissionsPage() {
         api.get('/missions/today'),
         api.get('/missions/points'),
         api.get('/companion/'),
-        api.get('/profiles/me'),
+        api.get('/profile/'),
       ])
       if (missionsRes.status === 'fulfilled') setMissions(missionsRes.value.data)
       if (pointsRes.status === 'fulfilled') setPoints(pointsRes.value.data.total_points)
