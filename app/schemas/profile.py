@@ -1,40 +1,33 @@
-from pydantic import BaseModel, EmailStr
+# app/schemas/profile.py
+from pydantic import BaseModel
 from typing import Optional
-from datetime import date, datetime
-from uuid import UUID
+from datetime import datetime
 
-class ProfileBase(BaseModel):
+class ProfileUpdate(BaseModel):
     preferred_name: Optional[str] = None
     full_name: Optional[str] = None
-    date_of_birth: Optional[date] = None
-    gender: Optional[str] = None
-    timezone: Optional[str] = "Asia/Singapore"
-    locale: Optional[str] = "en-SG"
     avatar_url: Optional[str] = None
+    pet_type: Optional[str] = None
+    pet_name: Optional[str] = None
+    pet_level: Optional[int] = None
+    pet_renamed_at: Optional[datetime] = None
+    caregiver_name: Optional[str] = None
+    font_size: Optional[str] = None
+    healthhub_connected: Optional[bool] = None
 
-class ProfileUpdate(ProfileBase):
-    pass
-
-class ProfileResponse(ProfileBase):
-    id: UUID
+class ProfileResponse(BaseModel):
+    id: str
     email: Optional[str] = None
-    onboarding_status: str
-    created_at: datetime
-    updated_at: datetime
-
-    class Config:
-        from_attributes = True
-
-class AccessibilityPrefsUpdate(BaseModel):
-    text_size: Optional[str] = "normal"
-    voice_mode_enabled: Optional[bool] = False
-    high_contrast_enabled: Optional[bool] = False
-    reduced_motion_enabled: Optional[bool] = False
-    preferred_input_mode: Optional[str] = "text"
-
-class AccessibilityPrefsResponse(AccessibilityPrefsUpdate):
-    user_id: UUID
-    updated_at: datetime
+    preferred_name: Optional[str] = None
+    full_name: Optional[str] = None
+    avatar_url: Optional[str] = None
+    pet_type: Optional[str] = None
+    pet_name: Optional[str] = None
+    pet_level: Optional[int] = None
+    pet_renamed_at: Optional[datetime] = None
+    caregiver_name: Optional[str] = None
+    font_size: Optional[str] = None
+    healthhub_connected: Optional[bool] = None
 
     class Config:
         from_attributes = True

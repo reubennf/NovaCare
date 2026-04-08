@@ -189,7 +189,7 @@ export default function LoginPage() {
           fontFamily: 'Poppins',
           fontWeight: 700
         }}>
-          Log in with
+          Login with
         </span>
         <img 
             src="/singpass.png" 

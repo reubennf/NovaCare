@@ -146,7 +146,39 @@ export default function DashboardPage() {
         <span style={{ color: 'black', fontSize: 20, fontWeight: 700 }}>Nova</span>
         <span style={{ color: '#20A090', fontSize: 20, fontWeight: 700 }}>Care</span>
       </div>
-
+      {/* Profile avatar - top right */}
+        <div
+        onClick={() => navigate('/profile')}
+        style={{
+            position: 'absolute',
+            right: 20,
+            top: 34,
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            overflow: 'hidden',
+            cursor: 'pointer',
+            border: '2px solid rgba(32,160,144,0.3)',
+            background: '#f0f0f0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10,
+        }}
+        >
+        {profile?.avatar_url ? (
+            <img
+            src={profile.avatar_url}
+            alt="profile"
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+        ) : (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="8" r="4" fill="#bbb"/>
+            <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" fill="#bbb"/>
+            </svg>
+        )}
+        </div>
       {/* Greeting */}
       <div style={{ left: 24, top: 80, position: 'absolute', right: 24, textAlign: 'center' }}>
         <div>
