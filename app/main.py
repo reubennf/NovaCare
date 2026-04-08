@@ -6,6 +6,7 @@ from app.core.config import settings
 from app.api.routes import profile, medications, companion, missions, caregiver, social, notifications, onboarding
 from app.workers.scheduler import start_scheduler, stop_scheduler
 import logging
+from fastapi.middleware.cors import CORSMiddleware
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -30,7 +31,12 @@ origins = [o.strip() for o in settings.ALLOWED_ORIGINS.split(",")]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "https://novacare-frontend.vercel.app",
+        "https://*.vercel.app",  # covers preview deployments
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
