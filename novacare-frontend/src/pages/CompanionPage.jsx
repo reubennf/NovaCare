@@ -4,6 +4,8 @@ import { useNavigate, Link } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import PetWithAccessories from '../components/PetWithAccessories'
 import { supabase } from '../lib/supabase'
+import { useEquipment } from '../context/EquipmentContext'
+
 import {
   getChatMessages,
   getChatThreadId,
@@ -30,10 +32,12 @@ export default function CompanionPage() {
     switch (species) {
       case 'dog': return '/sushi.png'
       case 'cat': return '/CatWelcome.png'
-      case 'chick': return '/sushi.png'
+      case 'sheep': return '/Cookie.png'
+      case 'chicken': return '/McNuggets.png'
       default: return '/sushi.png'
     }
   }
+  const { companion: contextCompanion } = useEquipment()
   const updateMessages = (updater) => {
     setMessages(prev => {
       const next = typeof updater === 'function' ? updater(prev) : updater
@@ -382,7 +386,7 @@ export default function CompanionPage() {
         marginBottom: 8
       }}>
         <PetWithAccessories
-          species={companion?.species}
+          species={contextCompanion?.species || companion?.species}
           size={450}
           style={{ top: 80 }}
         />

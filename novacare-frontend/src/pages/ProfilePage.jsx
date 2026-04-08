@@ -1,12 +1,14 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../lib/api'
+import { useEquipment } from '../context/EquipmentContext'
+
 
 const PET_OPTIONS = [
   { id: "cat",    label: "Whiskers", emoji: "🐱", description: "Calm & cozy companion" },
-  { id: "dog",    label: "Biscuit",  emoji: "🐶", description: "Loyal & energetic friend" },
-  { id: "rabbit", label: "Mochi",    emoji: "🐰", description: "Gentle & curious pal" },
-  { id: "bird",   label: "Sunny",    emoji: "🐦", description: "Cheerful & chatty buddy" },
+  { id: "dog",    label: "Sushi",  emoji: "🐶", description: "Loyal & energetic friend" },
+  { id: "sheep",  label: "Cookie",    emoji: "🐑", description: "Gentle & curious pal" },
+  { id: "chicken",   label: "McNuggets",    emoji: "🐥", description: "Cheerful & chatty buddy" },
 ]
 
 const FONT_SIZES = [
@@ -88,7 +90,7 @@ function TextInput({ value, onChange, placeholder, maxLength }) {
 
 export default function ProfilePage() {
   const navigate = useNavigate()
-
+  const { refreshCompanion } = useEquipment()
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [modal,   setModal]   = useState(null)
@@ -107,20 +109,33 @@ export default function ProfilePage() {
 
   const fetchProfile = async () => {
     try {
-      const res = await api.get('/profile/')
+      const [profileRes, companionRes] = await Promise.allSettled([
+        api.get('/profile/me'),
+        api.get('/companion/'),
+      ])
+      
+      const profileData = profileRes.status === 'fulfilled' ? profileRes.value.data : {}
+      const companionData = companionRes.status === 'fulfilled' ? companionRes.value.data : {}
+      
       setProfile({
         preferred_name: '',
         full_name: '',
         email: '',
         avatar_url: null,
-        pet_type: 'cat',
-        pet_name: 'Whiskers',
-        pet_level: 1,
+        // Use companion data for pet info
+        pet_type: companionData.species || 'dog',
+        pet_name: companionData.name || 'Sushi',
+        pet_level: companionData.level || 1,
         pet_renamed_at: null,
         caregiver_name: '',
         font_size: 'medium',
         healthhub_connected: false,
-        ...res.data,
+        companion_id: companionData.id,
+        ...profileData,
+        // Override with companion data (takes priority)
+        pet_type: companionData.species || 'dog',
+        pet_name: companionData.name || 'Sushi',
+        pet_level: companionData.level || 1,
       })
     } catch (err) {
       console.error(err)
@@ -175,10 +190,30 @@ export default function ProfilePage() {
 
   const confirmPetChange = async (petId) => {
     const pet = PET_OPTIONS.find(p => p.id === petId)
-    await patchProfile({ pet_type: petId, pet_name: pet.label, pet_level: 1, pet_renamed_at: null })
-    showToast(`${pet.emoji} ${pet.label} is your new companion!`)
-    setWarn(null)
-    setModal(null)
+    setSaving(true)
+    try {
+      // Update companion species
+      await api.post('/companion/', {
+        name: pet.label,
+        species: petId,
+        personality: 'cheerful'
+      })
+      setProfile(prev => ({
+        ...prev,
+        pet_type: petId,
+        pet_name: pet.label,
+        pet_level: 1
+      }))
+      await refreshCompanion()
+      showToast(`${pet.emoji} ${pet.label} is your new companion!`)
+    } catch (err) {
+      console.error(err)
+      showToast('Failed to change pet', 'error')
+    } finally {
+      setSaving(false)
+      setWarn(null)
+      setModal(null)
+    }
   }
 
   const canRename = () => {
@@ -192,9 +227,18 @@ export default function ProfilePage() {
 
   const handleSavePetName = async () => {
     if (!newPetName.trim() || !canRename()) return
-    await patchProfile({ pet_name: newPetName.trim(), pet_renamed_at: new Date().toISOString() })
-    showToast('Pet renamed! 🐾')
-    setModal(null)
+    setSaving(true)
+    try {
+      await api.patch('/companion/name', { name: newPetName.trim() })
+      setProfile(prev => ({ ...prev, pet_name: newPetName.trim(), pet_renamed_at: new Date().toISOString() }))
+      showToast('Pet renamed! 🐾')
+      setModal(null)
+    } catch (err) {
+      console.error(err)
+      showToast('Failed to rename', 'error')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleSaveCaregiver = async () => {

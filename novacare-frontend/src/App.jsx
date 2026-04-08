@@ -107,12 +107,12 @@ function AppRoutes() {
         <Route path="/social" element={<ProtectedRoute><SocialPage /></ProtectedRoute>} />
         <Route path="/chat/:friendId" element={<ProtectedRoute><FriendChatPage /></ProtectedRoute>} />
         <Route path="/medications" element={<ProtectedRoute><MedicationsPage /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
 
         {/* Sidebar layout pages */}
         <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route index element={<Navigate to="/dashboard" />} />
           <Route path="caregiver" element={<CaregiverPage />} />
-          <Route path="profile" element={<ProfilePage />} />
         </Route>
 
         {/* Fallback */}

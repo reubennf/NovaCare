@@ -578,3 +578,18 @@ def buy_room_item(payload: dict, user_id: str = Depends(get_current_user_id)):
     }).execute()
 
     return {"message": "Item purchased!"}
+
+class CompanionNameUpdate(BaseModel):
+    name: str
+
+@router.patch("/name")
+def update_companion_name(payload: CompanionNameUpdate, user_id: str = Depends(get_current_user_id)):
+    from datetime import datetime
+    companion = supabase.table("companions").select("id").eq("user_id", user_id).execute()
+    if not companion.data:
+        raise HTTPException(status_code=404, detail="No companion found")
+    supabase.table("companions").update({
+        "name": payload.name,
+        "updated_at": datetime.utcnow().isoformat()
+    }).eq("id", companion.data[0]["id"]).execute()
+    return {"message": "Name updated"}

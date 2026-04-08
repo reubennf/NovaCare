@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../lib/api'
 import PetWithAccessories from '../components/PetWithAccessories'
+import { useEquipment } from '../context/EquipmentContext'
+
 
 const categoryEmoji = {
   walk: '🚶',
@@ -19,6 +21,8 @@ export default function MissionsPage() {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [completing, setCompleting] = useState(null)
+  const { companion: contextCompanion } = useEquipment()
+
 
   const getGreeting = () => {
     const hour = new Date().getHours()
@@ -31,6 +35,8 @@ export default function MissionsPage() {
     switch (species) {
       case 'dog': return '/sushi.png'
       case 'cat': return '/CatWelcome.png'
+      case 'sheep': return '/Cookie.png'
+      case 'chicken': return '/McNuggets.png'
       default: return '/sushi.png'
     }
   }
@@ -254,7 +260,7 @@ export default function MissionsPage() {
 
           {/* Pet image - absolutely positioned to right, can overflow bottom */}
           <PetWithAccessories
-            species={companion?.species}
+            species={contextCompanion?.species || companion?.species}
             size={180}
             style={{right: -20}}
           />

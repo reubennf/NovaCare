@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useEquipment } from '../context/EquipmentContext'
+
 import api from '../lib/api'
 
 const ROOM_ITEMS = [
@@ -33,11 +35,14 @@ export default function DecoratePage() {
   const [selectedTheme, setSelectedTheme] = useState('garden')
   const [loading, setLoading] = useState(true)
   const [buying, setBuying] = useState(null)
+  const { companion: contextCompanion } = useEquipment()
 
   const getPetImage = (species) => {
     switch (species) {
       case 'dog': return '/sushi.png'
       case 'cat': return '/CatWelcome.png'
+      case 'sheep': return '/Cookie.png'
+      case 'chicken': return '/McNuggets.png'
       default: return '/sushi.png'
     }
   }

@@ -11,15 +11,26 @@ export function EquipmentProvider({ children }) {
     accessory_item_id: null,
     outfit_item_id: null
   })
+  const [companion, setCompanion] = useState(null)
 
   useEffect(() => {
-    if (user) fetchEquipment()
+    if (user) {
+      fetchEquipment()
+      fetchCompanion()
+    }
   }, [user])
 
   const fetchEquipment = async () => {
     try {
       const res = await api.get('/companion/equipment')
       setEquipment(res.data)
+    } catch (e) {}
+  }
+
+  const fetchCompanion = async () => {
+    try {
+      const res = await api.get('/companion/')
+      setCompanion(res.data)
     } catch (e) {}
   }
 
@@ -32,7 +43,13 @@ export function EquipmentProvider({ children }) {
   }
 
   return (
-    <EquipmentContext.Provider value={{ equipment, updateEquipment, fetchEquipment }}>
+    <EquipmentContext.Provider value={{
+      equipment,
+      updateEquipment,
+      fetchEquipment,
+      companion,
+      refreshCompanion: fetchCompanion
+    }}>
       {children}
     </EquipmentContext.Provider>
   )

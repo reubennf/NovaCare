@@ -55,6 +55,8 @@ export default function GroomPage() {
     switch (species) {
       case 'dog': return '/sushi.png'
       case 'cat': return '/CatWelcome.png'
+      case 'sheep': return '/Cookie.png'
+      case 'chicken': return '/McNuggets.png'
       default: return '/sushi.png'
     }
   }

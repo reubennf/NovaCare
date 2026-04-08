@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../lib/api'
 import PetWithAccessories from '../components/PetWithAccessories'
+import { useEquipment } from '../context/EquipmentContext'
+
 
 const BUBBLE_CONFIG = {
   feed: {
@@ -45,6 +47,7 @@ export default function DashboardPage() {
       hour12: false
     })
   }
+ const { companion: contextCompanion } = useEquipment()
 
  const getMoodLabel = (mood) => {
     switch (mood) {
@@ -62,7 +65,8 @@ export default function DashboardPage() {
     switch (species) {
       case 'dog': return '/sushi.png'
       case 'cat': return '/CatWelcome.png'
-      case 'chick': return '/sushi.png'
+      case 'sheep': return '/Cookie.png'
+      case 'chicken': return '/McNuggets.png'
       default: return '/sushi.png'
     }
   }
@@ -74,7 +78,7 @@ export default function DashboardPage() {
   const fetchData = async () => {
     try {
         const [profileRes, companionRes, careRes] = await Promise.allSettled([
-        api.get('/profiles/me'),
+        api.get('/profile/me'),
         api.get('/companion/'),
         api.get('/companion/care/status'),
         ])
@@ -259,9 +263,9 @@ export default function DashboardPage() {
         }} />
       {/* Pet image */}
         <PetWithAccessories
-        species={companion?.species}
-        size={600}
-        style={{right: 100}}
+            species={contextCompanion?.species || companion?.species}
+            size={600}
+            style={{right: 100}}
         />
 
       {/* Pet mood */}
