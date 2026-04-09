@@ -15,7 +15,7 @@ export default function LoginPage() {
         await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-            redirectTo: 'http://localhost:5173/dashboard'
+            redirectTo: `${window.location.origin}/dashboard`
         }
         })
     }
@@ -24,7 +24,7 @@ export default function LoginPage() {
         await supabase.auth.signInWithOAuth({
         provider: 'facebook',
         options: {
-            redirectTo: 'http://localhost:5173/dashboard'
+            redirectTo: `${window.location.origin}/dashboard`
         }
         })
     }
@@ -33,7 +33,7 @@ export default function LoginPage() {
         await supabase.auth.signInWithOAuth({
         provider: 'google', // replace with your email provider
         options: {
-            redirectTo: 'http://localhost:5173/dashboard'
+            redirectTo: `${window.location.origin}/dashboard`
         }
         })
     }

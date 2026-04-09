@@ -53,7 +53,7 @@ export default function LoadingScreen({ message = 'Loading...' }) {
         animation: 'fade-in 0.5s ease'
       }}>
         <span style={{ fontSize: 20, fontWeight: 700, color: 'black' }}>Nova</span>
-        <span style={{ fontSize: 20, fontWeight: 700, color: '#20A090' }}>Pet</span>
+        <span style={{ fontSize: 20, fontWeight: 700, color: '#20A090' }}>Care</span>
       </div>
 
       {/* Sparkles */}
