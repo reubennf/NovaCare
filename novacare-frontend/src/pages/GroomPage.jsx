@@ -118,7 +118,6 @@ export default function GroomPage() {
   }
 
   const handleToolStart = (tool, e) => {
-    e.preventDefault()
     isDraggingRef.current = true
     setActiveTool(tool)
     setDragging(true)
@@ -300,6 +299,7 @@ export default function GroomPage() {
           <div
             key={tool.id}
             onMouseDown={(e) => !isGroomed && handleToolStart(tool, e)}
+            onTouchStart={(e) => !isGroomed && handleToolStart(tool, e)}
             style={{
               position: 'absolute',
               ...tool.position,
