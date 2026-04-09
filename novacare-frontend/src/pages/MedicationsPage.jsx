@@ -112,7 +112,8 @@ export default function MedicationsPage() {
       const medId = res.data.id
       await api.post(`/medications/${medId}/schedules`, {
         frequency: preset.frequency,
-        times_of_day: preset.times,
+        times_of_day: preset.times,  // ← make sure this is the field name
+        days_of_week: [1,2,3,4,5,6,7],
         start_date: new Date().toISOString().split('T')[0]
       })
       await fetchData()

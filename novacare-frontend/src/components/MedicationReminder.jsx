@@ -69,11 +69,12 @@ export default function MedicationReminder() {
   }
 
   const handleTaken = async () => {
-    if (!reminder) return
+  if (!reminder) return
     try {
-      await api.patch(`/medications/logs/${reminder.log.id}`, { status: 'taken' })
+        await api.patch(`/medications/logs/${reminder.log.id}`, { status: 'taken' })
+        await api.post('/missions/award-bonus', { points: 5 })
     } catch (err) {
-      console.error(err)
+        console.error(err)
     }
     handleDismiss()
   }
