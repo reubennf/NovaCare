@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../lib/api'
 import LoadingScreen from '../components/LoadingScreen'
+import { useEquipment } from '../context/EquipmentContext'
 
 
 const TOOLS = [
@@ -39,6 +40,7 @@ const TOOLS = [
 
 export default function GroomPage() {
   const navigate = useNavigate()
+  const { companion: contextCompanion } = useEquipment()
   const [companion, setCompanion] = useState(null)
   const [activeTool, setActiveTool] = useState(null)
   const [sparkles, setSparkles] = useState([])
@@ -62,19 +64,31 @@ export default function GroomPage() {
       default: return '/sushi.png'
     }
   }
-  useEffect(() => {
+  // Companion fetch — use context if available
+    useEffect(() => {
+    if (contextCompanion) {
+        setCompanion(contextCompanion)
+        setLoading(false)
+        return
+    }
+    api.get('/companion/')
+        .then(res => setCompanion(res.data))
+        .catch(() => {})
+        .finally(() => setLoading(false))
+    }, [contextCompanion])
+
+    // Touch events — non-passive
+    useEffect(() => {
     const container = containerRef.current
     if (!container) return
-    
     const options = { passive: false }
     container.addEventListener('touchmove', handleMove, options)
     container.addEventListener('touchend', handleEnd, options)
-    
     return () => {
         container.removeEventListener('touchmove', handleMove, options)
         container.removeEventListener('touchend', handleEnd, options)
     }
-    }, [activeTool]) // re-attach when activeTool changes
+    }, [activeTool])
 
   const addSparkles = (x, y, tool) => {
     // Only 1 sparkle at a time, not 3
