@@ -73,7 +73,8 @@ export default function MedicationsPage() {
     name: '', dosage: '', frequency: 'once_daily', times: ['08:00'], notes: ''
   })
   const [addingCustom, setAddingCustom] = useState(false)
-
+  const [selectedPreset, setSelectedPreset] = useState(null)
+  const [presetTimes, setPresetTimes] = useState(['08:00']) 
   useEffect(() => {
     fetchData()
   }, [])
@@ -112,12 +113,13 @@ export default function MedicationsPage() {
       const medId = res.data.id
       await api.post(`/medications/${medId}/schedules`, {
         frequency: preset.frequency,
-        times_of_day: preset.times,  // ← make sure this is the field name
+        times_of_day: preset.times,
         days_of_week: [1,2,3,4,5,6,7],
         start_date: new Date().toISOString().split('T')[0]
       })
       await fetchData()
       setShowPresets(false)
+      setShowAdd(false)  // ← close the whole add panel
     } catch (err) {
       console.error(err)
     } finally {
@@ -151,11 +153,19 @@ export default function MedicationsPage() {
 
   const handleMarkTaken = async (logId) => {
     setMarkingDone(logId)
+    // Update UI immediately so it moves to taken section
+    setTodayLogs(prev => prev.map(log =>
+      log.id === logId ? { ...log, status: 'taken' } : log
+    ))
     try {
       await api.patch(`/medications/logs/${logId}`, { status: 'taken' })
-      fetchData()
+      await api.post('/missions/award-bonus', { points: 5 })
     } catch (err) {
       console.error(err)
+      // Revert on error
+      setTodayLogs(prev => prev.map(log =>
+        log.id === logId ? { ...log, status: 'pending' } : log
+      ))
     } finally {
       setMarkingDone(null)
     }
@@ -237,70 +247,254 @@ export default function MedicationsPage() {
         {/* Add medication panel */}
         {showAdd && (
           <div style={{ background: 'white', borderRadius: 20, padding: 16, marginBottom: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-              <button
-                onClick={() => { setShowPresets(true) }}
-                style={{ flex: 1, height: 44, background: 'rgba(32,160,144,0.1)', border: '1.5px solid #20A090', borderRadius: 22, color: '#20A090', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter' }}
+
+            {/* Close button */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <p style={{ margin: 0, fontWeight: 700, fontSize: 15 }}>
+                {selectedPreset ? selectedPreset.name : 'Add medication'}
+              </p>
+              <span
+                onClick={() => {
+                  setShowAdd(false)
+                  setShowPresets(false)
+                  setSelectedPreset(null)
+                  setPresetTimes(['08:00'])
+                }}
+                style={{ cursor: 'pointer', fontSize: 20, color: '#aaa', lineHeight: 1 }}
               >
-                Choose from list
-              </button>
-              <button
-                onClick={() => setShowPresets(false)}
-                style={{ flex: 1, height: 44, background: !showPresets ? '#20A090' : 'white', border: '1.5px solid #20A090', borderRadius: 22, color: !showPresets ? 'white' : '#20A090', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter' }}
-              >
-                Custom medication
-              </button>
+                ✕
+              </span>
             </div>
 
-            {showPresets ? (
+            {/* Tab switcher — only show when not in preset time picker */}
+            {!selectedPreset && (
+              <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                <button
+                  onClick={() => setShowPresets(true)}
+                  style={{
+                    flex: 1, height: 44,
+                    background: showPresets ? '#20A090' : 'rgba(32,160,144,0.1)',
+                    border: '1.5px solid #20A090', borderRadius: 22,
+                    color: showPresets ? 'white' : '#20A090',
+                    fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter'
+                  }}
+                >
+                  Choose from list
+                </button>
+                <button
+                  onClick={() => setShowPresets(false)}
+                  style={{
+                    flex: 1, height: 44,
+                    background: !showPresets ? '#20A090' : 'rgba(32,160,144,0.1)',
+                    border: '1.5px solid #20A090', borderRadius: 22,
+                    color: !showPresets ? 'white' : '#20A090',
+                    fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter'
+                  }}
+                >
+                  Custom
+                </button>
+              </div>
+            )}
+
+            {/* PRESET LIST */}
+            {showPresets && !selectedPreset && (
               <div>
-                <p style={{ fontSize: 12, color: '#888', margin: '0 0 12px' }}>Tap a medication to add it with standard dosage:</p>
-                {PRESET_MEDICATIONS.filter(p => !existingNames.includes(p.name.toLowerCase())).map(preset => (
-                  <div
-                    key={preset.name}
-                    onClick={() => handleAddPreset(preset)}
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', marginBottom: 8, background: '#F9F9F9', borderRadius: 12, cursor: 'pointer', opacity: addingPreset === preset.name ? 0.5 : 1 }}
-                  >
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: 14, color: 'black' }}>{preset.name}</div>
-                      <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>{preset.dosage} · {FREQUENCY_LABELS[preset.frequency]}</div>
-                      <div style={{ fontSize: 11, color: getMedColor(preset.purpose), marginTop: 1 }}>{preset.purpose}</div>
+                <p style={{ fontSize: 12, color: '#888', margin: '0 0 12px' }}>
+                  Tap a medication to set reminder time:
+                </p>
+                {PRESET_MEDICATIONS
+                  .filter(p => !existingNames.includes(p.name.toLowerCase()))
+                  .map(preset => (
+                    <div
+                      key={preset.name}
+                      onClick={() => {
+                        setSelectedPreset(preset)
+                        setPresetTimes([...preset.times])
+                      }}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '10px 12px', marginBottom: 8,
+                        background: '#F9F9F9', borderRadius: 12, cursor: 'pointer'
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: 14, color: 'black' }}>{preset.name}</div>
+                        <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>
+                          {preset.dosage} · {FREQUENCY_LABELS[preset.frequency]}
+                        </div>
+                        <div style={{ fontSize: 11, color: getMedColor(preset.purpose), marginTop: 1 }}>
+                          {preset.purpose}
+                        </div>
+                      </div>
+                      <span style={{ color: '#20A090', fontSize: 20, fontWeight: 300 }}>›</span>
                     </div>
-                    <span style={{ color: '#20A090', fontSize: 20, fontWeight: 300 }}>
-                      {addingPreset === preset.name ? '...' : '+'}
-                    </span>
-                  </div>
-                ))}
+                  ))
+                }
                 {PRESET_MEDICATIONS.filter(p => !existingNames.includes(p.name.toLowerCase())).length === 0 && (
-                  <p style={{ color: '#aaa', fontSize: 13, textAlign: 'center', padding: '16px 0' }}>All preset medications added!</p>
+                  <p style={{ color: '#aaa', fontSize: 13, textAlign: 'center', padding: '16px 0' }}>
+                    All preset medications added!
+                  </p>
                 )}
               </div>
-            ) : (
+            )}
+
+            {/* PRESET TIME PICKER */}
+            {showPresets && selectedPreset && (
               <div>
-                <input value={customForm.name} onChange={e => setCustomForm({...customForm, name: e.target.value})} placeholder="Medication name" style={inputStyle} />
-                <input value={customForm.dosage} onChange={e => setCustomForm({...customForm, dosage: e.target.value})} placeholder="Dosage (e.g. 10mg)" style={inputStyle} />
-                <input value={customForm.notes} onChange={e => setCustomForm({...customForm, notes: e.target.value})} placeholder="Purpose / notes (optional)" style={inputStyle} />
-                <select value={customForm.frequency} onChange={e => setCustomForm({...customForm, frequency: e.target.value})} style={inputStyle}>
+                {/* Back button */}
+                <div
+                  onClick={() => setSelectedPreset(null)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 16, cursor: 'pointer' }}
+                >
+                  <span style={{ fontSize: 20, color: '#888' }}>‹</span>
+                  <span style={{ fontSize: 13, color: '#888' }}>Back to list</span>
+                </div>
+
+                <div style={{ background: '#F9F9F9', borderRadius: 12, padding: '10px 14px', marginBottom: 16 }}>
+                  <p style={{ margin: 0, fontWeight: 600, fontSize: 14 }}>{selectedPreset.name}</p>
+                  <p style={{ margin: '2px 0 0', fontSize: 12, color: '#888' }}>
+                    {selectedPreset.dosage} · {FREQUENCY_LABELS[selectedPreset.frequency]}
+                  </p>
+                  <p style={{ margin: '2px 0 0', fontSize: 11, color: getMedColor(selectedPreset.purpose) }}>
+                    {selectedPreset.purpose}
+                  </p>
+                </div>
+
+                <p style={{ fontSize: 13, color: '#555', margin: '0 0 8px', fontWeight: 600 }}>
+                  Set reminder time(s) (SGT):
+                </p>
+
+                {presetTimes.map((t, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <input
+                      type="time"
+                      value={t}
+                      onChange={e => {
+                        const times = [...presetTimes]
+                        times[i] = e.target.value
+                        setPresetTimes(times)
+                      }}
+                      style={{
+                        flex: 1, height: 44, borderRadius: 22,
+                        border: '1px solid #E0E0E0', padding: '0 16px',
+                        fontSize: 14, fontFamily: 'Inter', outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    {presetTimes.length > 1 && (
+                      <span
+                        onClick={() => setPresetTimes(prev => prev.filter((_, idx) => idx !== i))}
+                        style={{ color: '#E53E3E', cursor: 'pointer', fontSize: 13, flexShrink: 0 }}
+                      >
+                        Remove
+                      </span>
+                    )}
+                  </div>
+                ))}
+
+                {presetTimes.length < 4 && (
+                  <div
+                    onClick={() => setPresetTimes(prev => [...prev, '08:00'])}
+                    style={{ color: '#20A090', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginBottom: 16 }}
+                  >
+                    + Add another time
+                  </div>
+                )}
+
+                <button
+                  onClick={() => handleAddPreset({ ...selectedPreset, times: presetTimes })}
+                  disabled={!!addingPreset}
+                  style={{
+                    width: '100%', height: 44, background: '#20A090',
+                    border: 'none', borderRadius: 22, color: 'white',
+                    fontSize: 14, fontWeight: 600, fontFamily: 'Inter',
+                    cursor: 'pointer', opacity: addingPreset ? 0.5 : 1
+                  }}
+                >
+                  {addingPreset ? 'Adding...' : `Add ${selectedPreset.name}`}
+                </button>
+              </div>
+            )}
+
+            {/* CUSTOM FORM */}
+            {!showPresets && (
+              <div>
+                <input
+                  value={customForm.name}
+                  onChange={e => setCustomForm({...customForm, name: e.target.value})}
+                  placeholder="Medication name"
+                  style={inputStyle}
+                />
+                <input
+                  value={customForm.dosage}
+                  onChange={e => setCustomForm({...customForm, dosage: e.target.value})}
+                  placeholder="Dosage (e.g. 10mg)"
+                  style={inputStyle}
+                />
+                <input
+                  value={customForm.notes}
+                  onChange={e => setCustomForm({...customForm, notes: e.target.value})}
+                  placeholder="Purpose / notes (optional)"
+                  style={inputStyle}
+                />
+                <select
+                  value={customForm.frequency}
+                  onChange={e => setCustomForm({...customForm, frequency: e.target.value})}
+                  style={inputStyle}
+                >
                   <option value="once_daily">Once daily</option>
                   <option value="twice_daily">Twice daily</option>
                   <option value="three_times_daily">3 times daily</option>
                   <option value="once_weekly">Once weekly</option>
                   <option value="as_needed">As needed</option>
                 </select>
-                <div style={{ marginBottom: 10 }}>
-                  <p style={{ fontSize: 12, color: '#888', margin: '0 0 6px' }}>Reminder time(s):</p>
-                  {customForm.times.map((t, i) => (
-                    <input key={i} type="time" value={t} onChange={e => {
-                      const times = [...customForm.times]
-                      times[i] = e.target.value
-                      setCustomForm({...customForm, times})
-                    }} style={{ ...inputStyle, width: 'auto', marginRight: 8 }} />
-                  ))}
-                </div>
+
+                <p style={{ fontSize: 12, color: '#888', margin: '0 0 6px' }}>Reminder time(s) (SGT):</p>
+                {customForm.times.map((t, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <input
+                      type="time"
+                      value={t}
+                      onChange={e => {
+                        const times = [...customForm.times]
+                        times[i] = e.target.value
+                        setCustomForm({...customForm, times})
+                      }}
+                      style={{
+                        flex: 1, height: 44, borderRadius: 22,
+                        border: '1px solid #E0E0E0', padding: '0 16px',
+                        fontSize: 14, fontFamily: 'Inter', outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    {customForm.times.length > 1 && (
+                      <span
+                        onClick={() => setCustomForm({...customForm, times: customForm.times.filter((_, idx) => idx !== i)})}
+                        style={{ color: '#E53E3E', cursor: 'pointer', fontSize: 13 }}
+                      >
+                        Remove
+                      </span>
+                    )}
+                  </div>
+                ))}
+                {customForm.times.length < 4 && (
+                  <div
+                    onClick={() => setCustomForm({...customForm, times: [...customForm.times, '08:00']})}
+                    style={{ color: '#20A090', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginBottom: 12 }}
+                  >
+                    + Add another time
+                  </div>
+                )}
+
                 <button
                   onClick={handleAddCustom}
                   disabled={!customForm.name || !customForm.dosage || addingCustom}
-                  style={{ width: '100%', height: 44, background: '#20A090', border: 'none', borderRadius: 22, color: 'white', fontSize: 14, fontWeight: 600, fontFamily: 'Inter', cursor: 'pointer', opacity: !customForm.name ? 0.5 : 1 }}
+                  style={{
+                    width: '100%', height: 44, background: '#20A090',
+                    border: 'none', borderRadius: 22, color: 'white',
+                    fontSize: 14, fontWeight: 600, fontFamily: 'Inter',
+                    cursor: 'pointer', opacity: (!customForm.name || !customForm.dosage) ? 0.5 : 1
+                  }}
                 >
                   {addingCustom ? 'Adding...' : 'Add medication'}
                 </button>
