@@ -2,9 +2,23 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 import pytz
 import logging
+from app.core.db import supabase
 
 logger = logging.getLogger(__name__)
 scheduler = BackgroundScheduler(timezone=pytz.timezone("Asia/Singapore"))
+
+def update_all_moods_hourly():
+    """Update mood for all users every hour."""
+    from app.services.risk_service import update_companion_mood_from_care
+    users = supabase.table("profiles")\
+        .select("id")\
+        .eq("onboarding_status", "completed")\
+        .execute()
+    for user in (users.data or []):
+        try:
+            update_companion_mood_from_care(user["id"])
+        except Exception as e:
+            print(f"Mood update failed for {user['id']}: {e}")
 
 def start_scheduler():
     """Register all jobs and start the scheduler."""
@@ -37,6 +51,15 @@ def start_scheduler():
         replace_existing=True
     )
 
+    # Update companion moods every hour
+    scheduler.add_job(
+        update_all_moods_hourly,
+        trigger="interval",
+        hours=1,
+        id="mood_worker",
+        replace_existing=True
+    )
+
     scheduler.start()
     logger.info("Scheduler started with all jobs registered")
 
@@ -44,27 +67,3 @@ def stop_scheduler():
     if scheduler.running:
         scheduler.shutdown()
         logger.info("Scheduler stopped")
-
-def update_all_companion_moods():
-    """Update mood for all users every hour."""
-    from app.services.risk_service import update_companion_mood_from_care
-    
-    users = supabase.table("profiles")\
-        .select("id")\
-        .eq("onboarding_status", "completed")\
-        .execute()
-    
-    for user in (users.data or []):
-        try:
-            update_companion_mood_from_care(user["id"])
-        except Exception as e:
-            print(f"Mood update failed for {user['id']}: {e}")
-
-# Add to scheduler setup:
-scheduler.add_job(
-    update_all_companion_moods,
-    'interval',
-    hours=1,
-    id='mood_worker',
-    replace_existing=True
-)

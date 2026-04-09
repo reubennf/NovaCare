@@ -9,6 +9,8 @@ from fastapi.responses import StreamingResponse
 import json
 from pydantic import BaseModel
 
+from app.services.risk_service import update_companion_mood_from_care
+
 router = APIRouter(prefix="/companion", tags=["companion"])
 
 @router.post("/", response_model=CompanionResponse)
@@ -28,10 +30,23 @@ def get_companion(user_id: str = Depends(get_current_user_id)):
     result = supabase.table("companions")\
         .select("*")\
         .eq("user_id", user_id)\
-        .execute()  # ← remove .single()
+        .execute()
     
     if not result.data:
         raise HTTPException(status_code=404, detail="No companion found")
+    
+    # Update mood on every dashboard load
+    try:
+        from app.services.risk_service import update_companion_mood_from_care
+        update_companion_mood_from_care(user_id)
+    except Exception:
+        pass
+
+    # Re-fetch after mood update
+    result = supabase.table("companions")\
+        .select("*")\
+        .eq("user_id", user_id)\
+        .execute()
     
     return result.data[0]
 
@@ -547,7 +562,7 @@ def chat_async(payload: ChatMessage, user_id: str = Depends(get_current_user_id)
                 "body": "Sorry, I had a little trouble there. Try again!",
                 "metadata": {"status": "error"}
             }).eq("id", assistant_msg_id).execute()
-
+    update_companion_mood_from_care(user_id)
     # Fire background thread
     thread = threading.Thread(target=process_in_background, daemon=True)
     thread.start()

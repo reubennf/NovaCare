@@ -51,16 +51,17 @@ export default function DashboardPage() {
  const { companion: contextCompanion } = useEquipment()
 
  const getMoodLabel = (mood) => {
-    switch (mood) {
-        case 'happy': return 'is happy 😊'
-        case 'hungry': return 'is hungry 🍗'
-        case 'dirty': return 'needs a bath 🧴'
-        case 'sad': return 'is feeling sad 😢'
-        case 'tired': return 'is a little tired 😴'
-        case 'concerned': return 'seems worried 😟'
-        default: return 'is happy 😊'
-    }
-    }
+  switch (mood) {
+    case 'happy': return 'is happy 😊'
+    case 'hungry': return 'is hungry 🍗'
+    case 'dirty': return 'needs a bath 🧴'
+    case 'sad': return 'is feeling sad 😢'
+    case 'tired': return 'is a little tired 😴'
+    case 'lonely': return 'is feeling lonely 🥺'
+    case 'concerned': return 'seems worried 😟'
+    default: return 'is happy 😊'
+  }
+ }
 
   const getPetImage = (species) => {
     switch (species) {
@@ -264,35 +265,31 @@ export default function DashboardPage() {
         </div>
 
         {/* Nudge message when pet needs care */}
-        {['hungry', 'dirty', 'sad', 'tired'].includes(companion?.mood_state) && (
-        <div
-            onClick={() => {
+        {['hungry', 'dirty', 'sad', 'tired', 'lonely'].includes(companion?.mood_state) && (
+        <div onClick={() => {
             if (companion?.mood_state === 'hungry' || companion?.mood_state === 'tired') navigate('/feed')
             else if (companion?.mood_state === 'dirty') navigate('/groom')
+            else if (companion?.mood_state === 'lonely') navigate('/companion')
             else navigate('/medications')
-            }}
-            style={{
-            position: 'absolute',
-            left: 24,
-            right: 24,
-            top: 470,
-            background: companion?.mood_state === 'hungry' || companion?.mood_state === 'tired'
-                ? 'rgba(255,107,107,0.08)'
-                : companion?.mood_state === 'dirty'
-                ? 'rgba(52,211,153,0.08)'
-                : 'rgba(32,160,144,0.08)',
-            borderRadius: 12,
-            padding: '8px 14px',
-            textAlign: 'center',
-            cursor: 'pointer',
-            zIndex: 10
-            }}
-        >
+        }}
+        style={{
+            position: 'absolute', left: 24, right: 24, top: 470,
+            background: companion?.mood_state === 'lonely' 
+            ? 'rgba(147,112,219,0.08)'
+            : companion?.mood_state === 'hungry' || companion?.mood_state === 'tired'
+            ? 'rgba(255,107,107,0.08)'
+            : companion?.mood_state === 'dirty'
+            ? 'rgba(52,211,153,0.08)'
+            : 'rgba(32,160,144,0.08)',
+            borderRadius: 12, padding: '8px 14px',
+            textAlign: 'center', cursor: 'pointer', zIndex: 10
+        }}>
             <p style={{ margin: 0, fontSize: 12, color: 'rgba(0,0,0,0.5)', lineHeight: 1.5 }}>
             {companion?.mood_state === 'hungry' && `${companionName} is hungry! Tap to feed 🍗`}
             {companion?.mood_state === 'tired' && `${companionName} could use some food soon 🍗`}
             {companion?.mood_state === 'dirty' && `${companionName} needs grooming! Tap to groom 🧴`}
             {companion?.mood_state === 'sad' && `${companionName} missed some medicine today 💊`}
+            {companion?.mood_state === 'lonely' && `${companionName} misses you! Tap to chat 💬`}
             </p>
         </div>
         )}

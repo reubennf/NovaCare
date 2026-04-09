@@ -199,12 +199,12 @@ Do not use bullet points. Write as flowing prose."""
     return response.choices[0].message.content
 
 def update_companion_mood_from_care(user_id: str):
-    """Update companion mood based on care status and medications."""
+    """Update companion mood based on priority system."""
     from datetime import datetime, timedelta
 
     now = datetime.utcnow()
 
-    # Check last feed time
+    # --- Priority 1: Check feed status (7h threshold) ---
     last_feed = supabase.table("pet_care_logs")\
         .select("performed_at")\
         .eq("user_id", user_id)\
@@ -213,29 +213,9 @@ def update_companion_mood_from_care(user_id: str):
         .limit(1)\
         .execute()
 
-    # Check last groom time
-    last_groom = supabase.table("pet_care_logs")\
-        .select("performed_at")\
-        .eq("user_id", user_id)\
-        .eq("care_type", "groom")\
-        .order("performed_at", desc=True)\
-        .limit(1)\
-        .execute()
-
-    # Check missed medications today
-    today_start = now.replace(hour=0, minute=0, second=0).isoformat()
-    missed_meds = supabase.table("medication_logs")\
-        .select("id")\
-        .eq("user_id", user_id)\
-        .eq("status", "pending")\
-        .gte("due_at", today_start)\
-        .lte("due_at", now.isoformat())\
-        .execute()
-
-    # Calculate hours since last care
     def hours_since(logs):
         if not logs.data:
-            return 999  # never done
+            return 999
         try:
             last = datetime.fromisoformat(
                 logs.data[0]["performed_at"].replace("Z", "+00:00")
@@ -245,34 +225,112 @@ def update_companion_mood_from_care(user_id: str):
             return 999
 
     hours_since_feed = hours_since(last_feed)
-    hours_since_groom = hours_since(last_groom)
-    missed_med_count = len(missed_meds.data or [])
-
-    # Determine mood — priority order
     if hours_since_feed >= 7:
         mood = "hungry"
-    elif hours_since_groom >= 12:
-        mood = "dirty"
-    elif missed_med_count >= 2:
-        mood = "sad"
-    elif hours_since_feed >= 4:
-        mood = "tired"
-    else:
-        mood = "happy"
+        _set_mood(supabase, user_id, mood)
+        return mood
 
-    # Update companion
-    companion = supabase.table("companions")\
+    # --- Priority 2: Check groom status (12h threshold) ---
+    last_groom = supabase.table("pet_care_logs")\
+        .select("performed_at")\
+        .eq("user_id", user_id)\
+        .eq("care_type", "groom")\
+        .order("performed_at", desc=True)\
+        .limit(1)\
+        .execute()
+
+    hours_since_groom = hours_since(last_groom)
+    if hours_since_groom >= 12:
+        mood = "dirty"
+        _set_mood(supabase, user_id, mood)
+        return mood
+
+    # --- Priority 3: Check last chat message (24h threshold) ---
+    threads = supabase.table("conversation_threads")\
         .select("id")\
         .eq("user_id", user_id)\
         .execute()
 
+    thread_ids = [t["id"] for t in (threads.data or [])]
+    last_chat_hours = 999
+
+    if thread_ids:
+        last_msg = supabase.table("conversation_messages")\
+            .select("created_at")\
+            .in_("thread_id", thread_ids)\
+            .eq("sender_type", "user")\
+            .order("created_at", desc=True)\
+            .limit(1)\
+            .execute()
+
+        if last_msg.data:
+            try:
+                last = datetime.fromisoformat(
+                    last_msg.data[0]["created_at"].replace("Z", "+00:00")
+                ).replace(tzinfo=None)
+                last_chat_hours = (now - last).total_seconds() / 3600
+            except Exception:
+                pass
+
+    if last_chat_hours >= 24:
+        mood = "lonely"
+        _set_mood(supabase, user_id, mood)
+        return mood
+
+    # --- Priority 4: Sentiment from recent chat ---
+    message_ids = []
+    if thread_ids:
+        recent_msgs = supabase.table("conversation_messages")\
+            .select("id")\
+            .in_("thread_id", thread_ids)\
+            .eq("sender_type", "user")\
+            .gte("created_at", (now - timedelta(days=3)).isoformat())\
+            .execute()
+        message_ids = [m["id"] for m in (recent_msgs.data or [])]
+
+    if message_ids:
+        analysis = supabase.table("message_analysis")\
+            .select("sentiment_score, mood_label")\
+            .in_("message_id", message_ids)\
+            .execute()
+
+        if analysis.data:
+            scores = [a["sentiment_score"] for a in analysis.data if a.get("sentiment_score") is not None]
+            low_count = len([a for a in analysis.data if a.get("mood_label") == "low"])
+            total = len(analysis.data)
+            avg_score = sum(scores) / len(scores) if scores else 0
+            low_ratio = low_count / total if total > 0 else 0
+
+            if avg_score > 0.3 and low_ratio < 0.2:
+                mood = "happy"
+            elif avg_score < -0.2 or low_ratio > 0.5:
+                mood = "sad"
+            elif hours_since_feed >= 4:
+                mood = "tired"
+            else:
+                mood = "happy"
+
+            _set_mood(supabase, user_id, mood)
+            return mood
+
+    # Default
+    mood = "happy"
+    _set_mood(supabase, user_id, mood)
+    return mood
+
+
+def _set_mood(supabase, user_id: str, mood: str):
+    """Helper to update companion mood."""
+    from datetime import datetime
+    companion = supabase.table("companions")\
+        .select("id")\
+        .eq("user_id", user_id)\
+        .execute()
     if companion.data:
         supabase.table("companions")\
             .update({
                 "mood_state": mood,
-                "updated_at": now.isoformat()
+                "updated_at": datetime.utcnow().isoformat()
             })\
             .eq("id", companion.data[0]["id"])\
             .execute()
-
-    return mood
