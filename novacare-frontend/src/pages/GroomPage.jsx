@@ -4,7 +4,6 @@ import api from '../lib/api'
 import LoadingScreen from '../components/LoadingScreen'
 import { useEquipment } from '../context/EquipmentContext'
 
-
 const TOOLS = [
   {
     id: 'brush',
@@ -14,7 +13,7 @@ const TOOLS = [
     bg: 'rgba(255,217,61,0.2)',
     border: 'rgba(255,217,61,0.5)',
     sparkles: ['✨', '⭐', '✨'],
-    position: { top: 200, left: 30 }
+    position: { top: 180, left: 30 }
   },
   {
     id: 'clean',
@@ -24,7 +23,7 @@ const TOOLS = [
     bg: 'rgba(107,203,119,0.2)',
     border: 'rgba(107,203,119,0.5)',
     sparkles: ['💧', '🫧', '💧'],
-    position: { top: 250, right: 30 }
+    position: { top: 280, right: 30 }
   },
   {
     id: 'teeth',
@@ -34,27 +33,32 @@ const TOOLS = [
     bg: 'rgba(116,185,255,0.2)',
     border: 'rgba(116,185,255,0.5)',
     sparkles: ['✨', '💫', '⭐'],
-    position: { top: 500, left: 50 }
+    position: { top: 460, left: 50 }
   },
 ]
 
 export default function GroomPage() {
   const navigate = useNavigate()
   const { companion: contextCompanion } = useEquipment()
-  const [companion, setCompanion] = useState(null)
-  const activeToolRef = useRef(null)
-  const dragPosRef = useRef({ x: 0, y: 0 })
+
+  // State
+  const [companion, setCompanion] = useState(contextCompanion || null)
+  const [activeTool, setActiveTool] = useState(null)
   const [sparkles, setSparkles] = useState([])
   const [groomedTools, setGroomedTools] = useState([])
   const [dragging, setDragging] = useState(false)
   const [dragPos, setDragPos] = useState({ x: 0, y: 0 })
   const [done, setDone] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [loading, setLoading] = useState(!contextCompanion)
+
+  // Refs
   const petRef = useRef(null)
   const containerRef = useRef(null)
   const sparkleId = useRef(0)
   const isDraggingRef = useRef(false)
-  const [loading, setLoading] = useState(true)
+  const activeToolRef = useRef(null)
+  const dragPosRef = useRef({ x: 0, y: 0 })
 
   const getPetImage = (species) => {
     switch (species) {
@@ -65,32 +69,45 @@ export default function GroomPage() {
       default: return '/sushi.png'
     }
   }
-  // Companion fetch — use context if available
-    useEffect(() => {
+
+  // Fetch companion
+  useEffect(() => {
     if (contextCompanion) {
-        setCompanion(contextCompanion)
-        setLoading(false)
-        return
+      setCompanion(contextCompanion)
+      setLoading(false)
+      return
     }
     api.get('/companion/')
-        .then(res => setCompanion(res.data))
-        .catch(() => {})
-        .finally(() => setLoading(false))
-    }, [])
+      .then(res => setCompanion(res.data))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [contextCompanion])
+
+  // Non-passive touch listeners for move/end
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+    const options = { passive: false }
+    container.addEventListener('touchmove', handleMove, options)
+    container.addEventListener('touchend', handleEnd, options)
+    return () => {
+      container.removeEventListener('touchmove', handleMove, options)
+      container.removeEventListener('touchend', handleEnd, options)
+    }
+  }, [])
 
   const addSparkles = (x, y, tool) => {
-    // Only 1 sparkle at a time, not 3
     const sparkle = {
-        id: sparkleId.current++,
-        emoji: tool.sparkles[Math.floor(Math.random() * tool.sparkles.length)],
-        x: x + (Math.random() - 0.5) * 40,
-        y: y + (Math.random() - 0.5) * 40,
+      id: sparkleId.current++,
+      emoji: tool.sparkles[Math.floor(Math.random() * tool.sparkles.length)],
+      x: x + (Math.random() - 0.5) * 40,
+      y: y + (Math.random() - 0.5) * 40,
     }
     setSparkles(prev => [...prev, sparkle])
     setTimeout(() => {
-        setSparkles(prev => prev.filter(s => s.id !== sparkle.id))
+      setSparkles(prev => prev.filter(s => s.id !== sparkle.id))
     }, 700)
-    }
+  }
 
   const getClientPos = (e) => {
     if (e.touches && e.touches.length > 0) {
@@ -101,76 +118,76 @@ export default function GroomPage() {
 
   const handleToolStart = (tool, e) => {
     isDraggingRef.current = true
-    activeToolRef.current = tool  // ← set ref
+    activeToolRef.current = tool
     setActiveTool(tool)
     setDragging(true)
     const rect = containerRef.current.getBoundingClientRect()
     const { clientX, clientY } = getClientPos(e)
     const pos = { x: clientX - rect.left, y: clientY - rect.top }
-    dragPosRef.current = pos  // ← set ref
+    dragPosRef.current = pos
     setDragPos(pos)
-    }
+  }
 
   const handleMove = (e) => {
-    if (!isDraggingRef.current || !activeToolRef.current) return  // ← use ref
+    if (!isDraggingRef.current || !activeToolRef.current) return
     e.preventDefault()
     const rect = containerRef.current.getBoundingClientRect()
     const { clientX, clientY } = getClientPos(e)
     const x = clientX - rect.left
     const y = clientY - rect.top
-    dragPosRef.current = { x, y }  // ← update ref
+    dragPosRef.current = { x, y }
     setDragPos({ x, y })
 
     if (petRef.current) {
-        const petRect = petRef.current.getBoundingClientRect()
-        const overPet = (
+      const petRect = petRef.current.getBoundingClientRect()
+      const overPet = (
         clientX >= petRect.left - 20 &&
         clientX <= petRect.right + 20 &&
         clientY >= petRect.top - 20 &&
         clientY <= petRect.bottom + 20
-        )
-        if (overPet) {
-        addSparkles(x, y, activeToolRef.current)  // ← use ref
-        }
+      )
+      if (overPet) {
+        addSparkles(x, y, activeToolRef.current)
+      }
     }
-    }
+  }
 
   const handleEnd = (e) => {
-    if (!isDraggingRef.current || !activeToolRef.current) return  // ← use ref
+    if (!isDraggingRef.current || !activeToolRef.current) return
     isDraggingRef.current = false
 
     if (petRef.current && containerRef.current) {
-        const petRect = petRef.current.getBoundingClientRect()
-        const containerRect = containerRef.current.getBoundingClientRect()
-        const petCenterX = petRect.left + petRect.width / 2 - containerRect.left
-        const petCenterY = petRect.top + petRect.height / 2 - containerRect.top
-        const pos = dragPosRef.current  // ← use ref
-        const dist = Math.sqrt(
+      const petRect = petRef.current.getBoundingClientRect()
+      const containerRect = containerRef.current.getBoundingClientRect()
+      const petCenterX = petRect.left + petRect.width / 2 - containerRect.left
+      const petCenterY = petRect.top + petRect.height / 2 - containerRect.top
+      const pos = dragPosRef.current
+      const dist = Math.sqrt(
         Math.pow(pos.x - petCenterX, 2) +
         Math.pow(pos.y - petCenterY, 2)
-        )
+      )
 
-        if (dist < 120) {
-        const toolId = activeToolRef.current.id  // ← use ref
-        const tool = activeToolRef.current  // ← use ref
+      if (dist < 120) {
+        const toolId = activeToolRef.current.id
+        const tool = activeToolRef.current
         setGroomedTools(prev => {
-            if (prev.includes(toolId)) return prev
-            const next = [...prev, toolId]
-            for (let i = 0; i < 3; i++) {
+          if (prev.includes(toolId)) return prev
+          const next = [...prev, toolId]
+          for (let i = 0; i < 3; i++) {
             setTimeout(() => addSparkles(petCenterX, petCenterY, tool), i * 150)
-            }
-            if (next.length >= TOOLS.length) {
+          }
+          if (next.length >= TOOLS.length) {
             setTimeout(() => setDone(true), 800)
-            }
-            return next
+          }
+          return next
         })
-        }
+      }
     }
 
-    activeToolRef.current = null  // ← clear ref
+    activeToolRef.current = null
     setDragging(false)
     setActiveTool(null)
-    }
+  }
 
   const handleSave = async () => {
     setSaving(true)
@@ -185,7 +202,9 @@ export default function GroomPage() {
   }
 
   const companionName = companion?.name || 'Sushi'
+
   if (loading) return <LoadingScreen message="Preparing some soap..." />
+
   return (
     <div
       ref={containerRef}
@@ -225,32 +244,14 @@ export default function GroomPage() {
       `}</style>
 
       {/* Header */}
-      <div style={{
-        padding: '44px 24px 0',
-        textAlign: 'center',
-        position: 'relative'
-      }}>
+      <div style={{ padding: '44px 24px 0', textAlign: 'center', position: 'relative' }}>
         <div
-        onClick={(e) => {
-            e.stopPropagation()
-            navigate('/dashboard')
-        }}
-        style={{
-            position: 'absolute',
-            left: 24,
-            top: 44,
-            cursor: 'pointer',
-            width: 36,
-            height: 36,
-            zIndex: 4,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-        }}
+          onClick={(e) => { e.stopPropagation(); navigate('/dashboard') }}
+          style={{ position: 'absolute', left: 24, top: 44, cursor: 'pointer', width: 36, height: 36, zIndex: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
             <path d="M15 18L9 12L15 6" stroke="#191D30" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
+          </svg>
         </div>
 
         <div style={{ marginBottom: 8 }}>
@@ -258,19 +259,10 @@ export default function GroomPage() {
           <span style={{ fontSize: 18, fontWeight: 700, color: '#20A090' }}>Care</span>
         </div>
 
-        <h1 style={{
-          fontSize: 26,
-          fontWeight: 400,
-          margin: '0 0 4px',
-          color: 'black'
-        }}>
+        <h1 style={{ fontSize: 26, fontWeight: 400, margin: '0 0 4px', color: 'black' }}>
           Groom <strong>{companionName}</strong>
         </h1>
-        <p style={{
-          fontSize: 13,
-          color: 'rgba(0,0,0,0.45)',
-          margin: 0
-        }}>
+        <p style={{ fontSize: 13, color: 'rgba(0,0,0,0.45)', margin: 0 }}>
           Drag each tool onto {companionName}
         </p>
       </div>
@@ -309,17 +301,35 @@ export default function GroomPage() {
             <span style={{ fontSize: 30 }}>
               {isGroomed ? '✓' : tool.emoji}
             </span>
-            <span style={{
-              fontSize: 9,
-              color: isGroomed ? '#20A090' : tool.color,
-              fontWeight: 600,
-              marginTop: 2
-            }}>
+            <span style={{ fontSize: 9, color: isGroomed ? '#20A090' : tool.color, fontWeight: 600, marginTop: 2 }}>
               {isGroomed ? 'Done!' : tool.label}
             </span>
           </div>
         )
       })}
+
+      {/* Dragging tool follows cursor */}
+      {dragging && activeTool && (
+        <div style={{
+          position: 'absolute',
+          left: dragPos.x - 30,
+          top: dragPos.y - 30,
+          width: 60,
+          height: 60,
+          borderRadius: 30,
+          background: activeTool.bg,
+          border: `2px solid ${activeTool.border}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 28,
+          pointerEvents: 'none',
+          zIndex: 10,
+          transform: 'rotate(15deg) scale(1.1)'
+        }}>
+          {activeTool.emoji}
+        </div>
+      )}
 
       {/* Pet - centered */}
       <div style={{
@@ -332,15 +342,13 @@ export default function GroomPage() {
       }}>
         <img
           ref={petRef}
-          src={getPetImage(companion?.species)}
+          src={getPetImage(companion?.species || contextCompanion?.species)}
           alt="pet"
           style={{
             width: 1000,
             height: 1000,
             objectFit: 'contain',
-            filter: done
-              ? 'drop-shadow(0 0 16px rgba(32,160,144,0.5))'
-              : 'none',
+            filter: done ? 'drop-shadow(0 0 16px rgba(32,160,144,0.5))' : 'none',
             transition: 'filter 0.5s'
           }}
           onError={e => { e.target.style.display = 'none' }}
@@ -355,7 +363,7 @@ export default function GroomPage() {
             position: 'absolute',
             left: sparkle.x - 10,
             top: sparkle.y - 10,
-            fontSize: 10,
+            fontSize: 16,
             pointerEvents: 'none',
             zIndex: 8,
             animation: 'sparkle-pop 1s ease forwards'
@@ -395,50 +403,29 @@ export default function GroomPage() {
         textAlign: 'center'
       }}>
         {!done ? (
-          <p style={{
-            fontSize: 13,
-            color: 'rgba(0,0,0,0.35)',
-            margin: 0
-          }}>
+          <p style={{ fontSize: 13, color: 'rgba(0,0,0,0.35)', margin: 0 }}>
             {groomedTools.length}/{TOOLS.length} tools used
           </p>
         ) : (
           <div style={{ animation: 'done-pop 0.5s ease' }}>
-            <p style={{
-              fontSize: 20,
-              fontWeight: 700,
-              color: '#20A090',
-              margin: '0 0 16px'
-            }}>
+            <p style={{ fontSize: 20, fontWeight: 700, color: '#20A090', margin: '0 0 16px' }}>
               {companionName} looks amazing! ✨
             </p>
             <button
-            onClick={(e) => {
-                e.stopPropagation()
-                handleSave()
-            }}
-            disabled={saving}
-            style={{
-                width: '100%',
-                height: 52,
-                background: '#20A090',
-                border: 'none',
-                borderRadius: 26,
-                color: 'white',
-                fontSize: 16,
-                fontWeight: 600,
-                fontFamily: 'Inter',
-                zIndex: 4,
-                cursor: 'pointer',
-                opacity: saving ? 0.7 : 1
-            }}
+              onClick={(e) => { e.stopPropagation(); handleSave() }}
+              disabled={saving}
+              style={{
+                width: '100%', height: 52, background: '#20A090',
+                border: 'none', borderRadius: 26, color: 'white',
+                fontSize: 16, fontWeight: 600, fontFamily: 'Inter',
+                zIndex: 4, cursor: 'pointer', opacity: saving ? 0.7 : 1
+              }}
             >
-            {saving ? 'Saving...' : 'Done grooming! 🎉'}
+              {saving ? 'Saving...' : 'Done grooming! 🎉'}
             </button>
           </div>
         )}
       </div>
-
     </div>
   )
 }
