@@ -23,12 +23,17 @@ def create_companion(payload: CompanionCreate, user_id: str = Depends(get_curren
         raise HTTPException(status_code=400, detail="Failed to create companion")
     return result.data[0]
 
-@router.get("/", response_model=CompanionResponse)
+@router.get("/")
 def get_companion(user_id: str = Depends(get_current_user_id)):
-    result = supabase.table("companions").select("*").eq("user_id", user_id).single().execute()
+    result = supabase.table("companions")\
+        .select("*")\
+        .eq("user_id", user_id)\
+        .execute()  # ← remove .single()
+    
     if not result.data:
-        raise HTTPException(status_code=404, detail="No companion found. Create one first.")
-    return result.data
+        raise HTTPException(status_code=404, detail="No companion found")
+    
+    return result.data[0]
 
 @router.post("/chat/stream")
 def chat_stream(payload: ChatMessage, user_id: str = Depends(get_current_user_id)):
@@ -154,7 +159,7 @@ def get_threads(user_id: str = Depends(get_current_user_id)):
 
 @router.get("/threads/{thread_id}/messages")
 def get_messages(thread_id: str, user_id: str = Depends(get_current_user_id)):
-    thread = supabase.table("conversation_threads").select("*").eq("id", thread_id).eq("user_id", user_id).single().execute()
+    thread = supabase.table("conversation_threads").select("*").eq("id", thread_id).eq("user_id", user_id).execute()
     if not thread.data:
         raise HTTPException(status_code=404, detail="Thread not found")
     result = supabase.table("conversation_messages")\
