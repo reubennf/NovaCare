@@ -63,11 +63,18 @@ export default function GroomPage() {
     }
   }
   useEffect(() => {
-    api.get('/companion/')
-        .then(res => setCompanion(res.data))
-        .catch(() => {})
-        .finally(() => setLoading(false))
-    }, [])
+    const container = containerRef.current
+    if (!container) return
+    
+    const options = { passive: false }
+    container.addEventListener('touchmove', handleMove, options)
+    container.addEventListener('touchend', handleEnd, options)
+    
+    return () => {
+        container.removeEventListener('touchmove', handleMove, options)
+        container.removeEventListener('touchend', handleEnd, options)
+    }
+    }, [activeTool]) // re-attach when activeTool changes
 
   const addSparkles = (x, y, tool) => {
     // Only 1 sparkle at a time, not 3
@@ -181,8 +188,6 @@ export default function GroomPage() {
       ref={containerRef}
       onMouseMove={handleMove}
       onMouseUp={handleEnd}
-      onTouchMove={handleMove}
-      onTouchEnd={handleEnd}
       style={{
         width: 390,
         height: 844,

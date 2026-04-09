@@ -116,9 +116,9 @@ export default function DashboardPage() {
   const mood = getMoodLabel(companion?.mood_state)
 
   // Which bubbles to show
-  const activeBubbles = Object.entries(BUBBLE_CONFIG).filter(
+    const activeBubbles = Object.entries(BUBBLE_CONFIG).filter(
     ([type]) => careStatus?.needs_care?.[type]
-  )
+    )
 //   const activeBubbles = Object.entries(BUBBLE_CONFIG)
 
   if (loading) return <LoadingScreen message="Getting things ready..." />
