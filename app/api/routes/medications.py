@@ -111,11 +111,11 @@ def get_today_logs(user_id: str = Depends(get_current_user_id)):
     return result.data or []
 
 @router.patch("/logs/{log_id}")
-def update_log(log_id: str, payload: dict, user_id: str = Depends(get_current_user_id)):
+def update_log(log_id: str, payload: MedicationLogUpdate, user_id: str = Depends(get_current_user_id)):
     from app.services.mission_service import award_points
 
-    updates = {"status": payload.get("status")}
-    if payload.get("status") == "taken":
+    updates = {"status": payload.status}  # ← payload.status not payload.get()
+    if payload.status == "taken":
         updates["taken_at"] = datetime.utcnow().isoformat()
 
     supabase.table("medication_logs")\
@@ -124,8 +124,7 @@ def update_log(log_id: str, payload: dict, user_id: str = Depends(get_current_us
         .eq("user_id", user_id)\
         .execute()
 
-    # Award 5 points for taking medication
-    if payload.get("status") == "taken":
+    if payload.status == "taken":
         try:
             award_points(user_id, 5, "mission", note="Medication taken")
             from app.services.risk_service import update_companion_mood_from_care
@@ -139,9 +138,9 @@ def generate_logs(schedule: dict, user_id: str):
     logs = []
     today = datetime.utcnow().date()
     
-    # Support both field names
-    time_slots = schedule.get("times_of_day") or schedule.get("time_slots") or ["08:00"]
-    days_of_week = schedule.get("days_of_week", [1,2,3,4,5,6,7])
+    # Use time_slots (correct field name from schema)
+    time_slots = schedule.get("time_slots") or ["08:00"]
+    days_of_week = schedule.get("days_of_week") or [1,2,3,4,5,6,7]
     
     for day_offset in range(7):
         target_date = today + timedelta(days=day_offset)
@@ -150,11 +149,11 @@ def generate_logs(schedule: dict, user_id: str):
             continue
         for time_slot in time_slots:
             hour, minute = map(int, time_slot.split(":"))
-            # Add SGT offset (UTC+8) — store in UTC
+            # SGT times stored as UTC (subtract 8 hours)
             due_at = datetime(
                 target_date.year, target_date.month, target_date.day,
                 hour, minute
-            ) - timedelta(hours=8)  # convert SGT to UTC
+            ) - timedelta(hours=8)
             logs.append({
                 "id": str(uuid.uuid4()),
                 "medication_schedule_id": schedule["id"],

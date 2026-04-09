@@ -55,13 +55,17 @@ class MedicationLogUpdate(BaseModel):
 
 class MedicationLogResponse(BaseModel):
     id: UUID
-    medication_schedule_id: UUID
+    medication_schedule_id: Optional[UUID] = None
+    medication_id: Optional[UUID] = None
     user_id: UUID
     due_at: datetime
     status: str
     taken_at: Optional[datetime] = None
     note: Optional[str] = None
-    created_at: datetime
+    created_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
 
     class Config:
         from_attributes = True

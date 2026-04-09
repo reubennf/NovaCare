@@ -107,19 +107,21 @@ export default function MedicationsPage() {
     try {
       const res = await api.post('/medications/', {
         name: preset.name,
-        dosage: preset.dosage,
-        notes: preset.purpose
+        instructions: preset.purpose  // ← notes → instructions
       })
       const medId = res.data.id
       await api.post(`/medications/${medId}/schedules`, {
-        frequency: preset.frequency,
-        times_of_day: preset.times,
+        schedule_type: 'daily',
+        times_per_day: preset.times.length,
+        time_slots: preset.times,        // ← times_of_day → time_slots
         days_of_week: [1,2,3,4,5,6,7],
         start_date: new Date().toISOString().split('T')[0]
       })
       await fetchData()
       setShowPresets(false)
-      setShowAdd(false)  // ← close the whole add panel
+      setShowAdd(false)
+      setSelectedPreset(null)
+      setPresetTimes(['08:00'])
     } catch (err) {
       console.error(err)
     } finally {
@@ -133,12 +135,13 @@ export default function MedicationsPage() {
     try {
       const res = await api.post('/medications/', {
         name: customForm.name,
-        dosage: customForm.dosage,
-        notes: customForm.notes
+        instructions: customForm.notes   // ← notes → instructions
       })
       await api.post(`/medications/${res.data.id}/schedules`, {
-        frequency: customForm.frequency,
-        times_of_day: customForm.times,
+        schedule_type: 'daily',
+        times_per_day: customForm.times.length,
+        time_slots: customForm.times,    // ← times_of_day → time_slots
+        days_of_week: [1,2,3,4,5,6,7],
         start_date: new Date().toISOString().split('T')[0]
       })
       setCustomForm({ name: '', dosage: '', frequency: 'once_daily', times: ['08:00'], notes: '' })
@@ -509,7 +512,7 @@ export default function MedicationsPage() {
             <p style={{ fontSize: 13, fontWeight: 700, color: 'black', margin: '0 0 8px' }}>⏰ Due today</p>
             {pendingLogs.map(log => {
               const med = medications.find(m => m.id === log.medication_id)
-              const color = getMedColor(med?.notes || '')
+              const color = getMedColor(med?.instructions || '')
               return (
                 <div key={log.id} style={{ background: 'white', borderRadius: 16, padding: '14px 16px', marginBottom: 10, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 12, border: `1px solid ${color}22` }}>
                   <div style={{ width: 44, height: 44, borderRadius: 22, background: `${color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>
@@ -518,7 +521,7 @@ export default function MedicationsPage() {
                   <div style={{ flex: 1 }}>
                     <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: 'black' }}>{med?.name || 'Medication'}</p>
                     <p style={{ margin: '2px 0 0', fontSize: 12, color: '#888' }}>{med?.dosage} · Due {log.due_at ? new Date(log.due_at).toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: true }) : 'today'}</p>
-                    {med?.notes && <p style={{ margin: '2px 0 0', fontSize: 11, color }}>{med.notes}</p>}
+                    {med?.instructions && <p style={{ margin: '2px 0 0', fontSize: 11, color }}>{med.notes}</p>}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     <button
