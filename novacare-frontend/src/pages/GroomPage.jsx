@@ -42,7 +42,8 @@ export default function GroomPage() {
   const navigate = useNavigate()
   const { companion: contextCompanion } = useEquipment()
   const [companion, setCompanion] = useState(null)
-  const [activeTool, setActiveTool] = useState(null)
+  const activeToolRef = useRef(null)
+  const dragPosRef = useRef({ x: 0, y: 0 })
   const [sparkles, setSparkles] = useState([])
   const [groomedTools, setGroomedTools] = useState([])
   const [dragging, setDragging] = useState(false)
@@ -119,74 +120,76 @@ export default function GroomPage() {
 
   const handleToolStart = (tool, e) => {
     isDraggingRef.current = true
+    activeToolRef.current = tool  // ← set ref
     setActiveTool(tool)
     setDragging(true)
     const rect = containerRef.current.getBoundingClientRect()
     const { clientX, clientY } = getClientPos(e)
-    setDragPos({ x: clientX - rect.left, y: clientY - rect.top })
-  }
+    const pos = { x: clientX - rect.left, y: clientY - rect.top }
+    dragPosRef.current = pos  // ← set ref
+    setDragPos(pos)
+    }
 
   const handleMove = (e) => {
-    if (!isDraggingRef.current || !activeTool) return
+    if (!isDraggingRef.current || !activeToolRef.current) return  // ← use ref
     e.preventDefault()
     const rect = containerRef.current.getBoundingClientRect()
     const { clientX, clientY } = getClientPos(e)
     const x = clientX - rect.left
     const y = clientY - rect.top
+    dragPosRef.current = { x, y }  // ← update ref
     setDragPos({ x, y })
 
-    // Check if over pet
     if (petRef.current) {
-      const petRect = petRef.current.getBoundingClientRect()
-      const overPet = (
+        const petRect = petRef.current.getBoundingClientRect()
+        const overPet = (
         clientX >= petRect.left - 20 &&
         clientX <= petRect.right + 20 &&
         clientY >= petRect.top - 20 &&
         clientY <= petRect.bottom + 20
-      )
-      if (overPet) {
-        addSparkles(x, y, activeTool)
-      }
+        )
+        if (overPet) {
+        addSparkles(x, y, activeToolRef.current)  // ← use ref
+        }
     }
-  }
+    }
 
   const handleEnd = (e) => {
-    if (!isDraggingRef.current || !activeTool) return
+    if (!isDraggingRef.current || !activeToolRef.current) return  // ← use ref
     isDraggingRef.current = false
 
-    // Check if dropped on pet
     if (petRef.current && containerRef.current) {
-      const petRect = petRef.current.getBoundingClientRect()
-      const containerRect = containerRef.current.getBoundingClientRect()
-      const petCenterX = petRect.left + petRect.width / 2 - containerRect.left
-      const petCenterY = petRect.top + petRect.height / 2 - containerRect.top
-      const dist = Math.sqrt(
-        Math.pow(dragPos.x - petCenterX, 2) +
-        Math.pow(dragPos.y - petCenterY, 2)
-      )
+        const petRect = petRef.current.getBoundingClientRect()
+        const containerRect = containerRef.current.getBoundingClientRect()
+        const petCenterX = petRect.left + petRect.width / 2 - containerRect.left
+        const petCenterY = petRect.top + petRect.height / 2 - containerRect.top
+        const pos = dragPosRef.current  // ← use ref
+        const dist = Math.sqrt(
+        Math.pow(pos.x - petCenterX, 2) +
+        Math.pow(pos.y - petCenterY, 2)
+        )
 
-      if (dist < 120) {
-        const toolId = activeTool.id
-        const tool = activeTool
+        if (dist < 120) {
+        const toolId = activeToolRef.current.id  // ← use ref
+        const tool = activeToolRef.current  // ← use ref
         setGroomedTools(prev => {
-          if (prev.includes(toolId)) return prev
-          const next = [...prev, toolId]
-          // Sparkle burst
-          for (let i = 0; i < 3; i++) {
+            if (prev.includes(toolId)) return prev
+            const next = [...prev, toolId]
+            for (let i = 0; i < 3; i++) {
             setTimeout(() => addSparkles(petCenterX, petCenterY, tool), i * 150)
-          }
-          // Check all done
-          if (next.length >= TOOLS.length) {
+            }
+            if (next.length >= TOOLS.length) {
             setTimeout(() => setDone(true), 800)
-          }
-          return next
+            }
+            return next
         })
-      }
+        }
     }
 
+    activeToolRef.current = null  // ← clear ref
     setDragging(false)
     setActiveTool(null)
-  }
+    }
 
   const handleSave = async () => {
     setSaving(true)
