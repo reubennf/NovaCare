@@ -50,6 +50,7 @@ export default function GroomPage() {
   const [done, setDone] = useState(false)
   const [saving, setSaving] = useState(false)
   const petRef = useRef(null)
+  const toolRefs = useRef({})
   const containerRef = useRef(null)
   const sparkleId = useRef(0)
   const isDraggingRef = useRef(false)
@@ -77,18 +78,23 @@ export default function GroomPage() {
         .finally(() => setLoading(false))
     }, [contextCompanion])
 
-    // Touch events — non-passive
     useEffect(() => {
-    const container = containerRef.current
-    if (!container) return
-    const options = { passive: false }
-    container.addEventListener('touchmove', handleMove, options)
-    container.addEventListener('touchend', handleEnd, options)
+    const listeners = []
+    TOOLS.forEach(tool => {
+        const el = toolRefs.current[tool.id]
+        if (!el) return
+        const isGroomed = groomedTools.includes(tool.id)
+        if (isGroomed) return
+        const handler = (e) => handleToolStart(tool, e)
+        el.addEventListener('touchstart', handler, { passive: false })
+        listeners.push({ el, handler })
+    })
     return () => {
-        container.removeEventListener('touchmove', handleMove, options)
-        container.removeEventListener('touchend', handleEnd, options)
+        listeners.forEach(({ el, handler }) => {
+        el.removeEventListener('touchstart', handler)
+        })
     }
-    }, [activeTool])
+    }, [groomedTools, activeTool])
 
   const addSparkles = (x, y, tool) => {
     // Only 1 sparkle at a time, not 3
@@ -294,7 +300,6 @@ export default function GroomPage() {
           <div
             key={tool.id}
             onMouseDown={(e) => !isGroomed && handleToolStart(tool, e)}
-            onTouchStart={(e) => !isGroomed && handleToolStart(tool, e)}
             style={{
               position: 'absolute',
               ...tool.position,
