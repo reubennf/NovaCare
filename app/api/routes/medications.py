@@ -75,18 +75,32 @@ def delete_medication(medication_id: str, user_id: str = Depends(get_current_use
 
 @router.post("/{medication_id}/schedules", response_model=ScheduleResponse)
 def create_schedule(medication_id: str, payload: ScheduleCreate, user_id: str = Depends(get_current_user_id)):
-    med = supabase.table("medications").select("id").eq("id", medication_id).eq("user_id", user_id).single().execute()
+    # Verify ownership
+    med = supabase.table("medications")\
+        .select("id")\
+        .eq("id", medication_id)\
+        .eq("user_id", user_id)\
+        .execute()
+    
     if not med.data:
         raise HTTPException(status_code=404, detail="Medication not found")
+    
     data = payload.model_dump(exclude_none=True)
-    data["medication_id"] = medication_id
+    data["medication_id"] = medication_id  # ← make sure this is set
+    
     for field in ["start_date", "end_date"]:
         if field in data:
             data[field] = str(data[field])
+    
     result = supabase.table("medication_schedules").insert(data).execute()
     if not result.data:
         raise HTTPException(status_code=400, detail="Failed to create schedule")
-    generate_logs(result.data[0], user_id)
+    
+    # Pass schedule with medication_id to generate_logs
+    schedule = result.data[0]
+    schedule["medication_id"] = medication_id  # ← ensure it's there
+    generate_logs(schedule, user_id)
+    
     return result.data[0]
 
 @router.get("/{medication_id}/schedules", response_model=list[ScheduleResponse])
@@ -157,7 +171,7 @@ def generate_logs(schedule: dict, user_id: str):
             logs.append({
                 "id": str(uuid.uuid4()),
                 "medication_schedule_id": schedule["id"],
-                "medication_id": schedule.get("medication_id"),
+                "medication_id": schedule.get("medication_id"),  # now safe
                 "user_id": user_id,
                 "due_at": due_at.isoformat(),
                 "status": "pending"
