@@ -15,7 +15,7 @@ export const ACCESSORIES = [
     slot: 'accessory',
     cost: 25,
     rarity: 'common',
-    position: { top: 0.65, left: 0.5, scale: 0.2 }
+    position: { top: 0.52, left: 0.5, scale: 0.1 }
   },
   {
     id: 'beret',
