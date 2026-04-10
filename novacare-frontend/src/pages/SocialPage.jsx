@@ -470,8 +470,8 @@ export default function SocialPage() {
                 <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
                   {[
                     { src: '/bump1.png', rotate: -4, caption: 'Beach buddies! 🏖️' },
-                    { src: '/bump2.png', rotate: 2, caption: 'Swim time! 🏊' },
-                    { src: '/bump3.png', rotate: -2, caption: 'Cycle time! 🚴' },
+                    { src: '/bump2.png', rotate: 2, caption: 'Cycle time! 🚴' },
+                    { src: '/bump3.png', rotate: -2, caption: 'Swim time! 🏊' },
                     ].map((sample, i) => (
                     <div
                         key={i}
