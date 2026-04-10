@@ -157,47 +157,52 @@ export default function GroomPage() {
     isDraggingRef.current = false
 
     if (petRef.current && containerRef.current) {
-      const petRect = petRef.current.getBoundingClientRect()
-      const containerRect = containerRef.current.getBoundingClientRect()
-      const petCenterX = petRect.left + petRect.width / 2 - containerRect.left
-      const petCenterY = petRect.top + petRect.height / 2 - containerRect.top
-      const pos = dragPosRef.current
-      const dist = Math.sqrt(
+        const petRect = petRef.current.getBoundingClientRect()
+        const containerRect = containerRef.current.getBoundingClientRect()
+        const petCenterX = petRect.left + petRect.width / 2 - containerRect.left
+        const petCenterY = petRect.top + petRect.height / 2 - containerRect.top
+        const pos = dragPosRef.current
+        const dist = Math.sqrt(
         Math.pow(pos.x - petCenterX, 2) +
         Math.pow(pos.y - petCenterY, 2)
-      )
+        )
 
-      if (dist < 120) {
+        if (dist < 120) {
         const toolId = activeToolRef.current.id
         const tool = activeToolRef.current
         setGroomedTools(prev => {
-          if (prev.includes(toolId)) return prev
-          const next = [...prev, toolId]
-          for (let i = 0; i < 3; i++) {
+            if (prev.includes(toolId)) return prev
+            const next = [...prev, toolId]
+            for (let i = 0; i < 3; i++) {
             setTimeout(() => addSparkles(petCenterX, petCenterY, tool), i * 150)
-          }
-          if (next.length >= TOOLS.length) {
-            setTimeout(() => setDone(true), 800)
-          }
-          return next
+            }
+            if (next.length >= TOOLS.length) {
+            setTimeout(() => {
+                setDone(true)
+                handleSave()
+            }, 800)
+            }
+            return next
         })
-      }
+        }
     }
 
     activeToolRef.current = null
     setDragging(false)
     setActiveTool(null)
-  }
+    }
 
   const handleSave = async () => {
     setSaving(true)
     try {
-      await api.post('/companion/care/groom')
-      setTimeout(() => navigate('/dashboard'), 800)
+        const res = await api.post('/companion/care/groom')
+        console.log('Groom saved:', res.data)
+        setTimeout(() => navigate('/dashboard'), 800)
     } catch (err) {
-      navigate('/dashboard')
+        console.error('Groom save error:', err)
+        navigate('/dashboard')
     } finally {
-      setSaving(false)
+        setSaving(false)
     }
   }
 
@@ -395,37 +400,28 @@ export default function GroomPage() {
       </div>
 
       {/* Bottom area */}
-      <div style={{
+        <div style={{
         position: 'absolute',
         bottom: 48,
         left: 24,
         right: 24,
         textAlign: 'center'
-      }}>
+        }}>
         {!done ? (
-          <p style={{ fontSize: 13, color: 'rgba(0,0,0,0.35)', margin: 0 }}>
+            <p style={{ fontSize: 13, color: 'rgba(0,0,0,0.35)', margin: 0 }}>
             {groomedTools.length}/{TOOLS.length} tools used
-          </p>
-        ) : (
-          <div style={{ animation: 'done-pop 0.5s ease' }}>
-            <p style={{ fontSize: 20, fontWeight: 700, color: '#20A090', margin: '0 0 16px' }}>
-              {companionName} looks amazing! ✨
             </p>
-            <button
-              onClick={(e) => { e.stopPropagation(); handleSave() }}
-              disabled={saving}
-              style={{
-                width: '100%', height: 52, background: '#20A090',
-                border: 'none', borderRadius: 26, color: 'white',
-                fontSize: 16, fontWeight: 600, fontFamily: 'Inter',
-                zIndex: 4, cursor: 'pointer', opacity: saving ? 0.7 : 1
-              }}
-            >
-              {saving ? 'Saving...' : 'Done grooming! 🎉'}
-            </button>
-          </div>
+        ) : (
+            <div style={{ animation: 'done-pop 0.5s ease' }}>
+            <p style={{ fontSize: 20, fontWeight: 700, color: '#20A090', margin: '0 0 8px' }}>
+                {companionName} looks amazing! ✨
+            </p>
+            <p style={{ fontSize: 13, color: 'rgba(0,0,0,0.5)', margin: 0 }}>
+                {saving ? 'Saving...' : 'Heading back...'}
+            </p>
+            </div>
         )}
-      </div>
+        </div>
     </div>
   )
 }

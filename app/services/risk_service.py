@@ -225,7 +225,7 @@ def update_companion_mood_from_care(user_id: str):
             return 999
 
     hours_since_feed = hours_since(last_feed)
-    if hours_since_feed >= 7:
+    if hours_since_feed >= 1:
         mood = "hungry"
         _set_mood(supabase, user_id, mood)
         return mood
@@ -240,7 +240,7 @@ def update_companion_mood_from_care(user_id: str):
         .execute()
 
     hours_since_groom = hours_since(last_groom)
-    if hours_since_groom >= 12:
+    if hours_since_groom >= 1:
         mood = "dirty"
         _set_mood(supabase, user_id, mood)
         return mood

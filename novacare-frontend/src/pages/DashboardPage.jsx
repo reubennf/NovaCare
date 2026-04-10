@@ -86,7 +86,10 @@ export default function DashboardPage() {
         ])
         if (profileRes.status === 'fulfilled') setProfile(profileRes.value.data)
         if (companionRes.status === 'fulfilled') setCompanion(companionRes.value.data)
-        if (careRes.status === 'fulfilled') setCareStatus(careRes.value.data)
+        if (careRes.status === 'fulfilled') {
+            console.log('Care status:', careRes.value.data)
+            setCareStatus(careRes.value.data)
+        }
     } catch (err) {
         console.error(err)
     } finally {
