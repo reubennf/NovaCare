@@ -468,7 +468,7 @@ def get_bump_photo(bump_id: str, user_id: str = Depends(get_current_user_id)):
 
     activity_context = ", ".join(all_activities) if all_activities else "going for a walk"
 
-    prompt = f"""Two virtual pets just met in real life! Generate a fun short photo caption.
+    prompt = f"""Two virtual 3D pets just met in real life! Generate a fun short photo caption.
 
 Pet 1: {pet1['name']} the {pet1['species']}
 Pet 2: {pet2['name']} the {pet2['species']}

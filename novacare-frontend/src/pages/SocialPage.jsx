@@ -37,6 +37,44 @@ export default function SocialPage() {
         default: return '🐾'
     }
     }
+  const getPetImageFromSpecies = (species) => {
+    switch (species) {
+        case 'dog': return '/sushi.png'
+        case 'cat': return '/CatWelcome.png'
+        case 'sheep': return '/Cookie.png'
+        case 'chicken': return '/McNuggets.png'
+        default: return '/sushi.png'
+    }
+    }
+
+    const getSceneBackground = (scene) => {
+    if (!scene) return 'linear-gradient(180deg, #87CEEB 60%, #90EE90 60%)'
+    const s = scene.toLowerCase()
+    if (s.includes('swim') || s.includes('pool') || s.includes('beach') || s.includes('water'))
+        return 'linear-gradient(180deg, #87CEEB 50%, #4FC3F7 50%)'
+    if (s.includes('park') || s.includes('walk') || s.includes('garden') || s.includes('grass'))
+        return 'linear-gradient(180deg, #87CEEB 50%, #81C784 50%)'
+    if (s.includes('indoor') || s.includes('home') || s.includes('room') || s.includes('play'))
+        return 'linear-gradient(180deg, #FFE0B2 50%, #FFCC80 50%)'
+    if (s.includes('night') || s.includes('star') || s.includes('moon'))
+        return 'linear-gradient(180deg, #1A237E 50%, #283593 50%)'
+    if (s.includes('rain') || s.includes('cloud'))
+        return 'linear-gradient(180deg, #90A4AE 50%, #78909C 50%)'
+    // Default sunny outdoor
+    return 'linear-gradient(180deg, #87CEEB 55%, #A5D6A7 55%)'
+    }
+
+    const getSceneDecor = (scene) => {
+    if (!scene) return '☁️'
+    const s = scene.toLowerCase()
+    if (s.includes('swim') || s.includes('pool') || s.includes('beach')) return '🌊'
+    if (s.includes('park') || s.includes('garden')) return '🌸'
+    if (s.includes('walk')) return '🌳'
+    if (s.includes('indoor') || s.includes('home')) return '🏠'
+    if (s.includes('night') || s.includes('star')) return '⭐'
+    if (s.includes('rain')) return '🌧️'
+    return '☁️'
+    }
   useEffect(() => {
     fetchData()
     return () => {
@@ -509,41 +547,70 @@ export default function SocialPage() {
                     boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
                     border: '1px solid rgba(0,0,0,0.06)'
                     }}>
-                    {/* Photo illustration */}
+                    {/* Photo illustration - update background */}
                     <div style={{
-                        background: 'linear-gradient(135deg, #E8F8F5 0%, #D1F2EB 100%)',
-                        padding: '24px 16px',
-                        textAlign: 'center',
-                        position: 'relative',
-                        minHeight: 160,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center'
+                    background: getSceneBackground(photo?.scene),
+                    padding: '24px 16px',
+                    textAlign: 'center',
+                    position: 'relative',
+                    minHeight: 200,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                     }}>
                         {/* Polaroid style frame */}
                         <div style={{
                         background: 'white',
-                        padding: '12px 12px 8px',
+                        padding: '10px 10px 24px',
                         borderRadius: 4,
-                        boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
                         transform: `rotate(${getRotation(bump.id)}deg)`,
-                        display: 'inline-block'
+                        display: 'inline-block',
+                        minWidth: 180
                         }}>
-                        {/* Pet emojis based on species */}
-                        <div style={{ fontSize: 48, marginBottom: 4, display: 'flex', gap: 8, justifyContent: 'center' }}>
-                            <span>{getSpeciesEmoji(photo?.pet1?.species)}</span>
-                            <span style={{ fontSize: 24, alignSelf: 'center' }}>🤝</span>
-                            <span>{getSpeciesEmoji(photo?.pet2?.species)}</span>
-                        </div>
+                        {/* Scene background */}
                         <div style={{
-                            fontSize: 10,
-                            color: '#555',
-                            textAlign: 'center',
-                            maxWidth: 140,
-                            fontStyle: 'italic'
+                            width: 160,
+                            height: 120,
+                            borderRadius: 2,
+                            background: getSceneBackground(photo?.scene),
+                            position: 'relative',
+                            overflow: 'hidden',
+                            display: 'flex',
+                            alignItems: 'flex-end',
+                            justifyContent: 'center',
+                            paddingBottom: 4
                         }}>
-                            {photo?.scene || 'Playing together'}
+                            {/* Scene decorations */}
+                            <div style={{ position: 'absolute', top: 6, left: 8, fontSize: 16 }}>
+                            {getSceneDecor(photo?.scene)}
+                            </div>
+                            <div style={{ position: 'absolute', top: 6, right: 8, fontSize: 16 }}>
+                            {getSceneDecor(photo?.scene)}
+                            </div>
+
+                            {/* Pet images side by side */}
+                            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4 }}>
+                            <img
+                                src={getPetImageFromSpecies(photo?.pet1?.species)}
+                                style={{ width: 64, height: 64, objectFit: 'contain', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }}
+                            />
+                            {/* Heart between pets */}
+                            <div style={{ fontSize: 16, marginBottom: 16 }}>❤️</div>
+                            <img
+                                src={getPetImageFromSpecies(photo?.pet2?.species)}
+                                style={{ width: 64, height: 64, objectFit: 'contain', transform: 'scaleX(-1)', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }}
+                            />
+                            </div>
+                        </div>
+
+                        {/* Pet names */}
+                        <div style={{
+                            fontSize: 9, color: '#555', textAlign: 'center',
+                            marginTop: 6, fontWeight: 600, letterSpacing: 0.5
+                        }}>
+                            {photo?.pet1?.name || '?'} & {photo?.pet2?.name || '?'}
                         </div>
                         </div>
 
