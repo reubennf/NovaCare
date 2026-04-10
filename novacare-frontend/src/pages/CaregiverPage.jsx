@@ -42,7 +42,71 @@ export default function CaregiverPage() {
 
   useEffect(() => {
     fetchData()
+    // Hardcoded sample mood history — 7 days
+    setMoodHistory([
+      { mood: 'happy', date: '2026-04-05' },
+      { mood: 'tired', date: '2026-04-06' },
+      { mood: 'happy', date: '2026-04-07' },
+      { mood: 'lonely', date: '2026-04-08' },
+      { mood: 'happy', date: '2026-04-09' },
+      { mood: 'sad', date: '2026-04-10' },
+      { mood: 'happy', date: '2026-04-11' },
+    ])
+
+    // Hardcoded sample stats
+    setStats({
+      missions_completed: 12,
+      meds_taken: 18,
+      points_earned: 340,
+      coins_spent: 80,
+      bumps_count: 3,
+      pet_cares: 9,
+    })
+
+    // Hardcoded sample summary
+    setSummary({
+      summary: 'Tan Ying Ying has had an active week! She completed 12 missions and took her medications consistently. Her mood has been mostly positive with occasional tiredness. Social engagement was good with 3 BUMP interactions recorded. Continue encouraging daily walks and medication adherence.',
+      risk_level: 'low'
+    })
   }, [])
+
+  // const fetchData = async () => {
+  //   try {
+  //     const [profileRes, companionRes, medsRes] = await Promise.allSettled([
+  //       api.get('/profile/'),
+  //       api.get('/companion/'),
+  //       api.get('/medications/'),
+  //     ])
+  //     if (profileRes.status === 'fulfilled') setProfile(profileRes.value.data)
+  //     if (companionRes.status === 'fulfilled') setCompanion(companionRes.value.data)
+  //     if (medsRes.status === 'fulfilled') setMedications(medsRes.value.data || [])
+
+  //     try {
+  //       const summaryRes = await api.get('/caregiver/summary')
+  //       setSummary(summaryRes.data)
+  //     } catch {}
+
+  //     try {
+  //       const moodRes = await api.get('/caregiver/mood-history')
+  //       setMoodHistory(moodRes.data || [])
+  //     } catch {}
+
+  //     try {
+  //       const statsRes = await api.get('/caregiver/stats')
+  //       setStats(statsRes.data)
+  //     } catch {}
+
+  //     try {
+  //       const reportsRes = await api.get('/caregiver/reports')
+  //       setReports(reportsRes.data || [])
+  //     } catch {}
+
+  //   } catch (err) {
+  //     console.error(err)
+  //   } finally {
+  //     setLoading(false)
+  //   }
+  // }
 
   const fetchData = async () => {
     try {
@@ -54,21 +118,6 @@ export default function CaregiverPage() {
       if (profileRes.status === 'fulfilled') setProfile(profileRes.value.data)
       if (companionRes.status === 'fulfilled') setCompanion(companionRes.value.data)
       if (medsRes.status === 'fulfilled') setMedications(medsRes.value.data || [])
-
-      try {
-        const summaryRes = await api.get('/caregiver/summary')
-        setSummary(summaryRes.data)
-      } catch {}
-
-      try {
-        const moodRes = await api.get('/caregiver/mood-history')
-        setMoodHistory(moodRes.data || [])
-      } catch {}
-
-      try {
-        const statsRes = await api.get('/caregiver/stats')
-        setStats(statsRes.data)
-      } catch {}
 
       try {
         const reportsRes = await api.get('/caregiver/reports')
