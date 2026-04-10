@@ -556,13 +556,18 @@ def chat_async(payload: ChatMessage, user_id: str = Depends(get_current_user_id)
             except Exception:
                 pass
 
+            # Update mood — INSIDE the background thread
+            try:
+                from app.services.risk_service import update_companion_mood_from_care
+                update_companion_mood_from_care(user_id)
+            except Exception:
+                pass
+
         except Exception as e:
-            # Update placeholder with error message
             supabase.table("conversation_messages").update({
                 "body": "Sorry, I had a little trouble there. Try again!",
                 "metadata": {"status": "error"}
             }).eq("id", assistant_msg_id).execute()
-    update_companion_mood_from_care(user_id)
     # Fire background thread
     thread = threading.Thread(target=process_in_background, daemon=True)
     thread.start()

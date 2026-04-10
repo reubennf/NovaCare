@@ -22,6 +22,9 @@ export default function OnboardingPage() {
   const [showWarning, setShowWarning] = useState(false)
 
   const [answers, setAnswers] = useState({
+    preferred_name: '',        // NEW
+    pet_name: '',              // NEW
+    pet_species: 'dog',        // NEW
     text_size: 'normal',
     voice_mode_enabled: false,
     high_contrast_enabled: false,
@@ -53,27 +56,28 @@ export default function OnboardingPage() {
 
   const isAnswered = () => {
     switch (step) {
-      case 1: return true
-      case 2: return answers.healthhub_sync !== null
-      case 3: return true
-      case 4: return answers.takes_daily_medication !== null
-      case 5: return answers.has_support_person !== null
-      case 6: return true
+      case 1: return answers.preferred_name.trim().length > 0 && answers.pet_name.trim().length > 0
+      case 2: return true
+      case 3: return answers.healthhub_sync !== null
+      case 4: return true
+      case 5: return answers.takes_daily_medication !== null
+      case 6: return answers.has_support_person !== null
+      case 7: return true
       default: return true
     }
   }
 
   const getNextStep = () => {
-    if (step === 2 && answers.healthhub_sync === false) return 4
-    if (step === 4 && answers.takes_daily_medication === false) return 5
-    if (step === 5 && answers.has_support_person === false) return 6
+    if (step === 3 && answers.healthhub_sync === false) return 5
+    if (step === 5 && answers.takes_daily_medication === false) return 6
+    if (step === 6 && answers.has_support_person === false) return 7
     return step + 1
     }
 
   const getPrevStep = () => {
-    if (step === 4 && answers.healthhub_sync === false) return 2
-    if (step === 5 && answers.takes_daily_medication === false) return 4
-    if (step === 6 && answers.has_support_person === false) return 5
+    if (step === 5 && answers.healthhub_sync === false) return 3
+    if (step === 6 && answers.takes_daily_medication === false) return 5
+    if (step === 7 && answers.has_support_person === false) return 6
     return step - 1
     }
 
@@ -178,64 +182,76 @@ export default function OnboardingPage() {
   const handleSubmit = async () => {
     setSubmitting(true)
     try {
-      // Submit onboarding answers
-      await api.post('/onboarding/complete', {
+        // Save profile name first
+        await api.patch('/profile/', {
+        preferred_name: answers.preferred_name
+        })
+
+        // Complete onboarding
+        await api.post('/onboarding/complete', {
         ...answers,
         healthhub_sync: answers.healthhub_sync ?? false,
         takes_daily_medication: answers.takes_daily_medication ?? false,
         has_support_person: answers.has_support_person ?? false,
-      })
+        })
 
-      // Submit medications if any
-      const validMeds = medications.filter(m => m.name.trim())
-      for (const med of validMeds) {
+        // Create companion with chosen name and species
+        await api.post('/companion/', {
+        name: answers.pet_name || 'Sushi',
+        species: answers.pet_species || 'dog',
+        personality: 'cheerful'
+        })
+
+        // Submit medications if any
+        const validMeds = medications.filter(m => m.name.trim())
+        for (const med of validMeds) {
         try {
-          const res = await api.post('/medications/', {
+            const res = await api.post('/medications/', {
             name: med.name,
             start_date: new Date().toISOString().split('T')[0]
-          })
-          // Create schedule based on frequency
-          const timeSlots = {
+            })
+            const timeSlots = {
             'Once daily': ['08:00'],
             'Twice daily': ['08:00', '20:00'],
             'Three times daily': ['08:00', '13:00', '20:00'],
             'Weekly': ['08:00'],
             'As needed': ['08:00'],
-          }
-          await api.post(`/medications/${res.data.id}/schedules`, {
+            }
+            await api.post(`/medications/${res.data.id}/schedules`, {
             schedule_type: 'daily',
             times_per_day: timeSlots[med.frequency]?.length || 1,
             time_slots: timeSlots[med.frequency] || ['08:00'],
             days_of_week: [1, 2, 3, 4, 5, 6, 7]
-          })
+            })
         } catch (e) {
-          console.error('Med error:', e)
+            console.error('Med error:', e)
         }
-      }
+        }
 
-      // Submit caregivers if any
-      const validCaregivers = caregivers.filter(c => c.name.trim())
-      for (const cg of validCaregivers) {
+        // Submit caregivers if any
+        const validCaregivers = caregivers.filter(c => c.name.trim())
+        for (const cg of validCaregivers) {
         try {
-          await api.post('/caregiver/contacts', {
+            await api.post('/caregiver/contacts', {
             name: cg.name,
             relationship: cg.relationship,
             phone: cg.phone,
             can_view_summaries: true,
             can_receive_alerts: true,
-          })
+            })
         } catch (e) {
-          console.error('Caregiver error:', e)
+            console.error('Caregiver error:', e)
         }
-      }
+        }
 
-      navigate('/dashboard')
+        navigate('/dashboard')
     } catch (err) {
-      console.error(err)
+        console.error('Onboarding submit error:', err)
+        navigate('/dashboard') // navigate anyway so user isn't stuck
     } finally {
-      setSubmitting(false)
+        setSubmitting(false)
     }
-  }
+    }
 
   const optionStyle = (isSelected) => ({
     width: '100%',
@@ -267,7 +283,7 @@ export default function OnboardingPage() {
     marginBottom: 10
   }
 
-  const isLastStep = step === 6 && extraStep === null
+  const isLastStep = step === 7 && extraStep === null
 
   return (
     <div style={{
@@ -298,7 +314,7 @@ export default function OnboardingPage() {
           marginBottom: 24
         }}>
           <div style={{
-            width: `${(step / 6) * 100}%`,
+            width: `${(step / 7) * 100}%`,
             height: 4,
             background: '#20A090',
             borderRadius: 2,
@@ -319,9 +335,76 @@ export default function OnboardingPage() {
 
       {/* Content */}
       <div style={{ flex: 1, padding: '0 24px', overflowY: 'auto' }}>
-
-        {/* Step 1 - Accessibility */}
+        {/* Step 1 - Personal info */}
         {step === 1 && !extraStep && (
+        <div>
+            <h1 style={{ fontSize: 28, fontWeight: 700, color: 'black', marginBottom: 8 }}>
+            Welcome! Let's get to<br />
+            <span style={{ color: '#20A090' }}>know you</span>
+            </h1>
+            <p style={{ fontSize: 14, color: '#888', marginBottom: 24 }}>
+            Tell us a little about yourself
+            </p>
+
+            <p style={{ fontSize: 13, color: '#555', margin: '0 0 6px', fontWeight: 600 }}>Your name</p>
+            <input
+            value={answers.preferred_name}
+            onChange={e => setAnswers(prev => ({ ...prev, preferred_name: e.target.value }))}
+            placeholder="What should we call you?"
+            style={inputStyle}
+            />
+
+            <p style={{ fontSize: 13, color: '#555', margin: '12px 0 6px', fontWeight: 600 }}>
+            Name your companion
+            </p>
+            <input
+            value={answers.pet_name}
+            onChange={e => setAnswers(prev => ({ ...prev, pet_name: e.target.value }))}
+            placeholder="e.g. Sushi, Mochi, Biscuit..."
+            style={inputStyle}
+            />
+
+            <p style={{ fontSize: 13, color: '#555', margin: '12px 0 10px', fontWeight: 600 }}>
+            Choose your companion
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            {[
+                { id: 'dog', emoji: '🐶', label: 'Dog', desc: 'Loyal & energetic' },
+                { id: 'cat', emoji: '🐱', label: 'Cat', desc: 'Calm & cozy' },
+                { id: 'sheep', emoji: '🐑', label: 'Sheep', desc: 'Gentle & fluffy' },
+                { id: 'chicken', emoji: '🐔', label: 'Chicken', desc: 'Cheerful & fun' },
+            ].map(pet => (
+                <div
+                key={pet.id}
+                onClick={() => setAnswers(prev => ({ ...prev, pet_species: pet.id }))}
+                style={{
+                    borderRadius: 16,
+                    border: `2px solid ${answers.pet_species === pet.id ? '#20A090' : '#E0E0E0'}`,
+                    background: answers.pet_species === pet.id ? 'rgba(32,160,144,0.06)' : 'white',
+                    padding: '14px 10px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 6,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                }}
+                >
+                <span style={{ fontSize: 36 }}>{pet.emoji}</span>
+                <span style={{ fontWeight: 600, fontSize: 14, color: '#1a1a1a' }}>{pet.label}</span>
+                <span style={{ fontSize: 11, color: '#aaa', textAlign: 'center' }}>{pet.desc}</span>
+                {answers.pet_species === pet.id && (
+                    <span style={{ fontSize: 10, background: 'rgba(32,160,144,0.1)', color: '#20A090', fontWeight: 700, padding: '2px 8px', borderRadius: 8 }}>
+                    Selected
+                    </span>
+                )}
+                </div>
+            ))}
+            </div>
+        </div>
+        )}
+        {/* Step 2 - Accessibility */}
+        {step === 2 && !extraStep && (
           <div>
             <h1 style={{ fontSize: 28, fontWeight: 700, color: 'black', marginBottom: 8 }}>
               How would you like<br />to use <span style={{ color: '#20A090' }}>NovaCare</span>?
@@ -380,8 +463,8 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* Step 2 - HealthHub */}
-        {step === 2 && !extraStep && (
+        {/* Step 3 - HealthHub */}
+        {step === 3 && !extraStep && (
           <div>
             <h1 style={{ fontSize: 28, fontWeight: 700, color: 'black', marginBottom: 8 }}>
               Would you like to<br />sync to HealthHub?
@@ -407,8 +490,8 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* Step 3 - Doctor */}
-        {step === 3 && !extraStep && (
+        {/* Step 4 - Doctor */}
+        {step === 4 && !extraStep && (
           <div>
             <h1 style={{ fontSize: 28, fontWeight: 700, color: 'black', marginBottom: 8 }}>
               Is this your assigned<br />doctor?
@@ -429,8 +512,8 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* Step 4 - Medication yes/no */}
-        {step === 4 && !extraStep && (
+        {/* Step 5 - Medication yes/no */}
+        {step === 5 && !extraStep && (
           <div>
             <h1 style={{ fontSize: 28, fontWeight: 700, color: 'black', marginBottom: 8 }}>
               Do you take daily{' '}
@@ -543,8 +626,8 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* Step 5 - Support person yes/no */}
-        {step === 5 && !extraStep && (
+        {/* Step 6 - Support person yes/no */}
+        {step === 6 && !extraStep && (
           <div>
             <h1 style={{ fontSize: 28, fontWeight: 700, color: 'black', marginBottom: 8 }}>
               Do you want to add someone who{' '}
@@ -643,8 +726,8 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* Step 6 - Health conditions */}
-        {step === 6 && !extraStep && (
+        {/* Step 7 - Health conditions */}
+        {step === 7 && !extraStep && (
           <div>
             <h1 style={{ fontSize: 28, fontWeight: 700, color: 'black', marginBottom: 4 }}>
               Select{' '}
