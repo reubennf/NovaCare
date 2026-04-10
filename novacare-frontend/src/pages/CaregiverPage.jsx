@@ -65,7 +65,7 @@ export default function CaregiverPage() {
 
     // Hardcoded sample summary
     setSummary({
-      summary: 'Tan Ying Ying has had an active week! She completed 12 missions and took her medications consistently. Her mood has been mostly positive with occasional tiredness. Social engagement was good with 3 BUMP interactions recorded. Continue encouraging daily walks and medication adherence.',
+      summary: 'User has had an active week! She completed 12 missions and took her medications consistently. Her mood has been mostly positive with occasional tiredness. Social engagement was good with 3 BUMP interactions recorded. Continue encouraging daily walks and medication adherence.',
       risk_level: 'low'
     })
   }, [])
