@@ -107,7 +107,6 @@ function AppRoutes() {
 
   return (
     <div style={{ fontSize: fontSizeMap[fontSize] || '15px' }}>
-      {user && <MedicationReminder />}
       <Routes>
           <>
         {/* Global medication reminder — shows on every page when logged in */}
