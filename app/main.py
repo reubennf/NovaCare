@@ -35,7 +35,8 @@ app.add_middleware(
         "http://localhost:5173",
         "http://localhost:3000",
         "https://novacare-frontend.vercel.app",
-        "https://*.vercel.app",  # covers preview deployments
+        "https://novacare-frontend-omega.vercel.app",  # ← add this
+        "https://*.vercel.app",  # ← covers all future vercel preview URLs
     ],
     allow_credentials=True,
     allow_methods=["*"],
