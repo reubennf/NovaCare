@@ -23,6 +23,14 @@ const BUBBLE_CONFIG = {
     size: 72,
     route: '/groom'
   },
+  play: {
+    emoji: '🎮',
+    label: 'Play',
+    color: '#F59E0B',
+    bg: 'rgba(245,158,11,0.15)',
+    size: 78,
+    route: '/play'
+  },
 }
 
 export default function DashboardPage() {

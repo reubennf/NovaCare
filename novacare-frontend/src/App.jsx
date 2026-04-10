@@ -24,6 +24,7 @@ import DressUpPage from './pages/DressUpPage'
 import DecoratePage from './pages/DecoratePage'
 import FriendChatPage from './pages/FriendChatPage'
 import MedicationReminder from './components/MedicationReminder'
+import PlayPage from './pages/PlayPage'
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
@@ -129,6 +130,7 @@ function AppRoutes() {
         <Route path="/chat/:friendId" element={<ProtectedRoute><FriendChatPage /></ProtectedRoute>} />
         <Route path="/medications" element={<ProtectedRoute><MedicationsPage /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+        <Route path="/play" element={<ProtectedRoute><PlayPage /></ProtectedRoute>} />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/welcome" />} />

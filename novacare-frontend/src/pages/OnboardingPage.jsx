@@ -182,20 +182,24 @@ export default function OnboardingPage() {
   const handleSubmit = async () => {
     setSubmitting(true)
     try {
-        // Save profile name first
+        // Save profile name
         await api.patch('/profile/', {
         preferred_name: answers.preferred_name
         })
 
-        // Complete onboarding
+        // Complete onboarding — only send schema-valid fields
         await api.post('/onboarding/complete', {
-        ...answers,
+        text_size: answers.text_size,
+        voice_mode_enabled: answers.voice_mode_enabled,
+        high_contrast_enabled: answers.high_contrast_enabled,
         healthhub_sync: answers.healthhub_sync ?? false,
+        assigned_doctor: answers.assigned_doctor,
         takes_daily_medication: answers.takes_daily_medication ?? false,
         has_support_person: answers.has_support_person ?? false,
+        health_conditions: answers.health_conditions || [],
         })
 
-        // Create companion with chosen name and species
+        // Create companion
         await api.post('/companion/', {
         name: answers.pet_name || 'Sushi',
         species: answers.pet_species || 'dog',
@@ -247,7 +251,7 @@ export default function OnboardingPage() {
         navigate('/dashboard')
     } catch (err) {
         console.error('Onboarding submit error:', err)
-        navigate('/dashboard') // navigate anyway so user isn't stuck
+        navigate('/dashboard')
     } finally {
         setSubmitting(false)
     }

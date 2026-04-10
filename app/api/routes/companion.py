@@ -341,11 +341,12 @@ def perform_pet_care(care_type: str, user_id: str = Depends(get_current_user_id)
             updates["xp"] = pet["xp"] + 5
         supabase.table("companions").update(updates).eq("id", pet["id"]).execute()
 
-    # Award 5 points for feed or groom
-    if care_type in ["feed", "groom"]:
+    # Award points for care actions
+    points_map = {"feed": 5, "groom": 5, "play": 10}
+    if care_type in points_map:
         award_points(
             user_id=user_id,
-            points=5,
+            points=points_map[care_type],
             source_type="mission",
             note=f"Pet care: {care_type}"
         )
@@ -383,7 +384,7 @@ def get_care_status(user_id: str = Depends(get_current_user_id)):
     thresholds = {
         "feed": 1,    # hours
         "groom": 2,  # hours
-        "play": 24,   # hours
+        "play": 1,   # hours
         "medicine": 24 # hours
     }
 
