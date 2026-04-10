@@ -408,3 +408,104 @@ def get_bump_history(user_id: str = Depends(get_current_user_id)):
         .limit(20)\
         .execute()
     return result.data or []
+
+@router.get("/bumps/photo/{bump_id}")
+def get_bump_photo(bump_id: str, user_id: str = Depends(get_current_user_id)):
+    """Generate AI caption for a bump meeting."""
+    from app.core.config import settings
+    from openai import OpenAI
+
+    # Get bump details
+    bump = supabase.table("bump_events")\
+        .select("*")\
+        .eq("id", bump_id)\
+        .execute()
+    
+    if not bump.data:
+        raise HTTPException(status_code=404, detail="Bump not found")
+    
+    bump_data = bump.data[0]
+
+    # Get both users' companions
+    user1_companion = supabase.table("companions")\
+        .select("name, species")\
+        .eq("user_id", bump_data["user_id_1"])\
+        .execute()
+    
+    user2_companion = supabase.table("companions")\
+        .select("name, species")\
+        .eq("user_id", bump_data["user_id_2"])\
+        .execute()
+
+    pet1 = user1_companion.data[0] if user1_companion.data else {"name": "Sushi", "species": "dog"}
+    pet2 = user2_companion.data[0] if user2_companion.data else {"name": "Mochi", "species": "cat"}
+
+    # Get recent activity of both users
+    user1_missions = supabase.table("user_missions")\
+        .select("description")\
+        .eq("user_id", bump_data["user_id_1"])\
+        .eq("status", "completed")\
+        .order("completed_at", desc=True)\
+        .limit(3)\
+        .execute()
+    
+    user2_missions = supabase.table("user_missions")\
+        .select("description")\
+        .eq("user_id", bump_data["user_id_2"])\
+        .eq("status", "completed")\
+        .order("completed_at", desc=True)\
+        .limit(3)\
+        .execute()
+
+    activities1 = [m["description"] for m in (user1_missions.data or [])]
+    activities2 = [m["description"] for m in (user2_missions.data or [])]
+    all_activities = activities1 + activities2
+
+    client = OpenAI(
+        api_key=settings.SEA_LION_API_KEY,
+        base_url="https://api.sea-lion.ai/v1"
+    )
+
+    activity_context = ", ".join(all_activities) if all_activities else "going for a walk"
+
+    prompt = f"""Two virtual pets just met in real life! Generate a fun short photo caption.
+
+Pet 1: {pet1['name']} the {pet1['species']}
+Pet 2: {pet2['name']} the {pet2['species']}
+Recent activities: {activity_context}
+
+Generate:
+1. A fun scene description (what the pets are doing together, based on their activities)
+2. A short caption (max 10 words, fun and cute)
+
+Return ONLY JSON like this:
+{{"scene": "Swimming together at the pool", "caption": "Best swim buddies ever! 🏊"}}"""
+
+    try:
+        response = client.chat.completions.create(
+            model="aisingapore/Gemma-SEA-LION-v4-27B-IT",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=100,
+            extra_body={"chat_template_kwargs": {"thinking_mode": "off"}}
+        )
+        import json
+        text = response.choices[0].message.content.strip()
+        text = text.replace("```json", "").replace("```", "").strip()
+        data = json.loads(text)
+        return {
+            "bump_id": bump_id,
+            "pet1": pet1,
+            "pet2": pet2,
+            "scene": data.get("scene", "Playing together"),
+            "caption": data.get("caption", "Best friends! 🐾"),
+            "bumped_at": bump_data.get("created_at")
+        }
+    except Exception as e:
+        return {
+            "bump_id": bump_id,
+            "pet1": pet1,
+            "pet2": pet2,
+            "scene": "Playing together happily",
+            "caption": "Best friends! 🐾",
+            "bumped_at": bump_data.get("created_at")
+        }

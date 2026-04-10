@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../lib/api'
 import LoadingScreen from '../components/LoadingScreen'
 
-const TABS = ['Map', 'Friends', 'Events', 'Chat']
+const TABS = ['Map', 'Friends', 'Events', 'Chat', 'Album']
 
 export default function SocialPage() {
   const navigate = useNavigate()
@@ -24,7 +24,19 @@ export default function SocialPage() {
   })
   const [loading, setLoading] = useState(true)
   const watchRef = useRef(null)
+  const [bumpPhotos, setBumpPhotos] = useState({})
+  const [loadingPhotos, setLoadingPhotos] = useState(false)
+  const [bumpSuccess, setBumpSuccess] = useState(null) // stores bump result
 
+  const getSpeciesEmoji = (species) => {
+    switch (species) {
+        case 'dog': return '🐶'
+        case 'cat': return '🐱'
+        case 'sheep': return '🐑'
+        case 'chicken': return '🐔'
+        default: return '🐾'
+    }
+    }
   useEffect(() => {
     fetchData()
     return () => {
@@ -80,24 +92,24 @@ export default function SocialPage() {
 
   const handleBump = async (friendId) => {
     if (!myLocation) {
-      alert('Please enable location sharing first to BUMP!')
-      return
+        alert('Please enable location sharing first to BUMP!')
+        return
     }
     setBumping(friendId)
     try {
-      const res = await api.post('/social/bump', {
+        const res = await api.post('/social/bump', {
         friend_id: friendId,
         latitude: myLocation.latitude,
         longitude: myLocation.longitude
-      })
-      alert(`BUMP! ${res.data.message} You're ${res.data.distance_metres}m apart!`)
-      fetchData()
+        })
+        setBumpSuccess({ message: res.data.message, distance: res.data.distance_metres })
+        fetchData()
     } catch (err) {
-      alert(err.response?.data?.detail || 'BUMP failed — make sure you are close to your friend!')
+        alert(err.response?.data?.detail || 'BUMP failed — make sure you are close to your friend!')
     } finally {
-      setBumping(null)
+        setBumping(null)
     }
-  }
+    }
 
   const handleCreateEvent = async () => {
     try {
@@ -112,6 +124,11 @@ export default function SocialPage() {
       console.error(err)
     }
   }
+  // Add this helper function
+    const getRotation = (id) => {
+    const hash = id.split('').reduce((a, c) => a + c.charCodeAt(0), 0)
+    return hash % 2 === 0 ? 2 : -2
+    }
 
   const handleRSVP = async (eventId) => {
     try {
@@ -128,7 +145,32 @@ export default function SocialPage() {
     fontSize: 14, fontFamily: 'Inter', boxSizing: 'border-box',
     outline: 'none', marginBottom: 10
   }
+  const fetchBumpAlbum = async () => {
+    setLoadingPhotos(true)
+    try {
+        const res = await api.get('/social/bumps')
+        setBumps(res.data || [])
+        // Fetch photo data for each bump
+        const photos = {}
+        for (const bump of (res.data || []).slice(0, 10)) {
+        try {
+            const photoRes = await api.get(`/social/bumps/photo/${bump.id}`)
+            photos[bump.id] = photoRes.data
+        } catch {
+            photos[bump.id] = null
+        }
+        }
+        setBumpPhotos(photos)
+    } catch (err) {
+        console.error(err)
+    } finally {
+        setLoadingPhotos(false)
+    }
+    }
 
+    useEffect(() => {
+    if (activeTab === 'Album') fetchBumpAlbum()
+    }, [activeTab])
   const btnStyle = (color = '#20A090') => ({
     background: color, border: 'none', borderRadius: 22,
     color: 'white', fontSize: 13, fontWeight: 600,
@@ -435,7 +477,156 @@ export default function SocialPage() {
             )}
           </div>
         )}
+        {activeTab === 'Album' && (
+        <div style={{ padding: '0 16px 24px' }}>
+            <h2 style={{ fontSize: 20, fontWeight: 700, margin: '16px 0 4px' }}>
+            📸 Bump Album
+            </h2>
+            <p style={{ fontSize: 13, color: '#888', margin: '0 0 16px' }}>
+            Memories from when your pets met!
+            </p>
+
+            {loadingPhotos ? (
+            <div style={{ textAlign: 'center', padding: '40px 0', color: '#aaa' }}>
+                <div style={{ fontSize: 32, marginBottom: 8 }}>📸</div>
+                <p style={{ fontSize: 13 }}>Developing your photos...</p>
+            </div>
+            ) : bumps.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '60px 0', color: '#aaa' }}>
+                <div style={{ fontSize: 48, marginBottom: 12 }}>📷</div>
+                <p style={{ fontSize: 14, margin: '0 0 4px', fontWeight: 600, color: '#555' }}>No photos yet!</p>
+                <p style={{ fontSize: 13 }}>BUMP with a friend to create your first memory</p>
+            </div>
+            ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {bumps.map(bump => {
+                const photo = bumpPhotos[bump.id]
+                return (
+                    <div key={bump.id} style={{
+                    background: 'white',
+                    borderRadius: 20,
+                    overflow: 'hidden',
+                    boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+                    border: '1px solid rgba(0,0,0,0.06)'
+                    }}>
+                    {/* Photo illustration */}
+                    <div style={{
+                        background: 'linear-gradient(135deg, #E8F8F5 0%, #D1F2EB 100%)',
+                        padding: '24px 16px',
+                        textAlign: 'center',
+                        position: 'relative',
+                        minHeight: 160,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }}>
+                        {/* Polaroid style frame */}
+                        <div style={{
+                        background: 'white',
+                        padding: '12px 12px 8px',
+                        borderRadius: 4,
+                        boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                        transform: `rotate(${getRotation(bump.id)}deg)`,
+                        display: 'inline-block'
+                        }}>
+                        {/* Pet emojis based on species */}
+                        <div style={{ fontSize: 48, marginBottom: 4, display: 'flex', gap: 8, justifyContent: 'center' }}>
+                            <span>{getSpeciesEmoji(photo?.pet1?.species)}</span>
+                            <span style={{ fontSize: 24, alignSelf: 'center' }}>🤝</span>
+                            <span>{getSpeciesEmoji(photo?.pet2?.species)}</span>
+                        </div>
+                        <div style={{
+                            fontSize: 10,
+                            color: '#555',
+                            textAlign: 'center',
+                            maxWidth: 140,
+                            fontStyle: 'italic'
+                        }}>
+                            {photo?.scene || 'Playing together'}
+                        </div>
+                        </div>
+
+                        {/* Camera flash decoration */}
+                        <div style={{ position: 'absolute', top: 12, right: 12, fontSize: 20 }}>📸</div>
+                    </div>
+
+                    {/* Caption & info */}
+                    <div style={{ padding: '12px 16px' }}>
+                        <p style={{ margin: '0 0 4px', fontWeight: 700, fontSize: 14, color: 'black' }}>
+                        {photo?.caption || 'Best friends! 🐾'}
+                        </p>
+                        <p style={{ margin: 0, fontSize: 12, color: '#888' }}>
+                        {photo?.pet1?.name} & {photo?.pet2?.name} · {
+                            bump.bumped_at
+                            ? new Date(bump.bumped_at).toLocaleDateString('en-SG', { day: 'numeric', month: 'short', year: 'numeric' })
+                            : 'Recently'
+                        }
+                        </p>
+                    </div>
+                    </div>
+                )
+                })}
+            </div>
+            )}
+        </div>
+        )}
       </div>
+      {/* BUMP success popup */}
+            {bumpSuccess && (
+                <div style={{
+                position: 'fixed', inset: 0, zIndex: 50,
+                background: 'rgba(0,0,0,0.5)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: '0 24px'
+                }}>
+                <div style={{
+                    background: 'white', borderRadius: 24,
+                    padding: '32px 24px', textAlign: 'center',
+                    width: '100%', maxWidth: 340,
+                }}>
+                    <div style={{ fontSize: 64, marginBottom: 8 }}>👊</div>
+                    <h3 style={{ fontSize: 24, fontWeight: 700, margin: '0 0 8px', color: 'black' }}>BUMP!</h3>
+                    <p style={{ fontSize: 14, color: '#888', margin: '0 0 4px' }}>
+                    You and your friend met!
+                    </p>
+                    <p style={{ fontSize: 13, color: '#888', margin: '0 0 4px' }}>
+                    {bumpSuccess.distance}m apart
+                    </p>
+                    <p style={{ fontSize: 15, color: '#20A090', fontWeight: 700, margin: '0 0 8px' }}>
+                    +20 points each 🌟
+                    </p>
+                    <p style={{ fontSize: 12, color: '#aaa', margin: '0 0 24px' }}>
+                    📸 A photo was added to your Album!
+                    </p>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                    <button
+                        onClick={() => {
+                        setBumpSuccess(null)
+                        setActiveTab('Album')
+                        }}
+                        style={{
+                        flex: 1, height: 48, background: '#20A090',
+                        border: 'none', borderRadius: 24, color: 'white',
+                        fontSize: 14, fontWeight: 600, fontFamily: 'Inter', cursor: 'pointer'
+                        }}
+                    >
+                        See Album 📸
+                    </button>
+                    <button
+                        onClick={() => setBumpSuccess(null)}
+                        style={{
+                        flex: 1, height: 48, background: '#F5F5F5',
+                        border: 'none', borderRadius: 24, color: '#888',
+                        fontSize: 14, fontWeight: 600, fontFamily: 'Inter', cursor: 'pointer'
+                        }}
+                    >
+                        Close
+                    </button>
+                    </div>
+                </div>
+            </div>
+      )}
     </div>
   )
 }
