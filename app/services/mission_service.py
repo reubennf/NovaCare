@@ -90,6 +90,10 @@ Rules:
 - Max 8 words
 - Only consists of actionable and specific (e.g. "Walk to the park and back, Drink a glass of water") or emotional (e.g. "Take a moment to enjoy the sunshine") tasks
 - No punctuation at end
+- Do NOT call the user name
+- Be specific of measurable actions.
+- Do NOT put drink medications as a task.
+- Do NOT use "and" to combine tasks. Separate them into two missions instead.
 - Return ONLY the mission text, nothing else"""
                 }],
                 max_tokens=30,

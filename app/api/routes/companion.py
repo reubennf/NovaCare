@@ -382,10 +382,10 @@ def get_care_status(user_id: str = Depends(get_current_user_id)):
 
     # Check which ones need attention
     thresholds = {
-        "feed": 1,    # hours
-        "groom": 2,  # hours
-        "play": 1,   # hours
-        "medicine": 24 # hours
+        "feed": 0.2,    # hours
+        "groom": 0.1,  # hours
+        "play": 0.2,   # hours
+        "medicine": 0.1 # hours
     }
 
     needs_care = {}
