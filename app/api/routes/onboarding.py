@@ -10,7 +10,7 @@ router = APIRouter(prefix="/onboarding", tags=["onboarding"])
 def complete_onboarding(payload: OnboardingPayload, user_id: str = Depends(get_current_user_id)):
     try:
         # Update profile
-        supabase.table("profiles").update({
+        result = supabase.table("profiles").update({
             "healthhub_sync": payload.healthhub_sync,
             "assigned_doctor": payload.assigned_doctor,
             "takes_daily_medication": payload.takes_daily_medication,
@@ -19,14 +19,18 @@ def complete_onboarding(payload: OnboardingPayload, user_id: str = Depends(get_c
             "onboarding_completed_at": datetime.utcnow().isoformat(),
             "updated_at": datetime.utcnow().isoformat()
         }).eq("id", user_id).execute()
+        
+        print(f"Profile update result: {result.data}")  # ← add this
 
         # Update accessibility preferences
-        supabase.table("accessibility_preferences").update({
+        acc_result = supabase.table("accessibility_preferences").update({
             "text_size": payload.text_size,
             "voice_mode_enabled": payload.voice_mode_enabled,
             "high_contrast_enabled": payload.high_contrast_enabled,
             "updated_at": datetime.utcnow().isoformat()
         }).eq("user_id", user_id).execute()
+        
+        print(f"Accessibility update result: {acc_result.data}")  # ← add this
 
         # Clear old health conditions and insert new ones
         supabase.table("user_health_conditions")\
@@ -44,6 +48,7 @@ def complete_onboarding(payload: OnboardingPayload, user_id: str = Depends(get_c
         return {"message": "Onboarding complete"}
 
     except Exception as e:
+        print(f"Onboarding error: {e}")  # ← add this
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/status")

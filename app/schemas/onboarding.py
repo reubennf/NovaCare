@@ -16,3 +16,7 @@ class OnboardingPayload(BaseModel):
     has_support_person: Optional[bool] = False
     # Conditions
     health_conditions: Optional[List[str]] = []
+    # New fields — ignored by backend but won't cause validation errors
+    preferred_name: Optional[str] = None
+    pet_name: Optional[str] = None
+    pet_species: Optional[str] = None
