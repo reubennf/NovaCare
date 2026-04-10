@@ -15,7 +15,7 @@ export default function LoginPage() {
         await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-            redirectTo: `https://novacare-frontend.vercel.app`
+            redirectTo: `${window.location.origin}/dashboard`
         }
         })
     }
@@ -231,17 +231,15 @@ export default function LoginPage() {
     alignItems: 'center'
     }}>
     {/* Email icon */}
-    <div style={{
-        width: 70,
-        height: 70,
-        borderRadius: 26,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        cursor: 'pointer',
-        flexShrink: 0,
-    }}>
-        <img src="/icons/email.svg" alt="email" style={{ width: 70, height: 70, display: 'block' }} />
+    <div
+    onClick={() => navigate('/signup')}
+    style={{
+        width: 70, height: 70, borderRadius: 26,
+        display: 'flex', alignItems: 'center',
+        justifyContent: 'center', cursor: 'pointer',
+    }}
+    >
+    <img src="/icons/email.svg" alt="email" style={{ width: 70, height: 70, display: 'block' }} />
     </div>
 
     {/* Google icon */}
