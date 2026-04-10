@@ -335,18 +335,47 @@ export default function SocialPage() {
               <p style={{ fontSize: 14, fontWeight: 700, margin: '0 0 8px', color: 'black' }}>
                 Recent BUMPs 👊
               </p>
-              {bumps.length === 0 ? (
-                <p style={{ fontSize: 13, color: '#aaa' }}>No bumps yet — meet a friend in person!</p>
-              ) : (
-                bumps.slice(0, 3).map(bump => (
-                  <div key={bump.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #F5F5F5' }}>
-                    <span style={{ fontSize: 13, color: '#555' }}>
-                      BUMP at {new Date(bump.bumped_at).toLocaleDateString('en-SG')}
-                    </span>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#20A090' }}>+{bump.points_awarded} pts</span>
-                  </div>
-                ))
-              )}
+              ) : bumps.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                    <div style={{ fontSize: 48, marginBottom: 8 }}>📷</div>
+                    <p style={{ fontSize: 14, margin: '0 0 4px', fontWeight: 600, color: '#555' }}>No photos yet!</p>
+                    <p style={{ fontSize: 13, color: '#aaa', margin: '0 0 20px' }}>
+                    BUMP with a friend to create your first memory 👊
+                    </p>
+
+                    {/* Sample polaroids */}
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
+                    {[
+                        { src: '/bump1.png', rotate: -4, caption: 'Beach buddies! 🌳' },
+                        { src: '/bump2.png', rotate: 2, caption: 'Swim time! 🏊' },
+                        { src: '/bump3.png', rotate: -2, caption: 'Cycle time! 🐾' },
+                    ].map((sample, i) => (
+                        <div key={i} style={{
+                        background: 'white',
+                        padding: '8px 8px 20px',
+                        borderRadius: 4,
+                        boxShadow: '0 6px 20px rgba(0,0,0,0.15)',
+                        transform: `rotate(${sample.rotate}deg)`,
+                        display: 'inline-block',
+                        width: 100
+                        }}>
+                        <img
+                            src={sample.src}
+                            alt={`sample ${i + 1}`}
+                            style={{ width: 84, height: 84, objectFit: 'cover', borderRadius: 2, display: 'block' }}
+                            onError={e => { e.target.style.display = 'none' }}
+                        />
+                        <div style={{ fontSize: 8, color: '#aaa', textAlign: 'center', marginTop: 6, fontStyle: 'italic' }}>
+                            {sample.caption}
+                        </div>
+                        </div>
+                    ))}
+                    </div>
+
+                    <p style={{ fontSize: 11, color: '#ccc', margin: '16px 0 0' }}>
+                    Your memories will look like this!
+                    </p>
+                </div>
             </div>
           </div>
         )}
