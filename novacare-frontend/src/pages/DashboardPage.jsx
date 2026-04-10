@@ -213,6 +213,8 @@ export default function DashboardPage() {
                 navigate('/groom')
             } else if (type === 'feed') {
                 navigate('/feed')
+            } else if (type === 'play') {
+                navigate('/play')
             } else {
                 handleCare(type)
             }
