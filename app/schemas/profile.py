@@ -14,6 +14,7 @@ class ProfileUpdate(BaseModel):
     caregiver_name: Optional[str] = None
     font_size: Optional[str] = None
     healthhub_connected: Optional[bool] = None
+    is_caregiver: Optional[bool] = None
 
 class ProfileResponse(BaseModel):
     id: str
@@ -28,6 +29,7 @@ class ProfileResponse(BaseModel):
     caregiver_name: Optional[str] = None
     font_size: Optional[str] = None
     healthhub_connected: Optional[bool] = None
+    is_caregiver: Optional[bool] = None
 
     class Config:
         from_attributes = True

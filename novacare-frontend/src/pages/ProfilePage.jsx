@@ -331,6 +331,25 @@ export default function ProfilePage() {
           <Row label="Display Name"   value={displayName}                         onClick={() => { setNewName(profile.preferred_name || ''); setModal('username') }} />
           <Row label="Profile Picture"                                             onClick={() => setModal('avatar')} />
           <Row label="Caregiver Name" value={profile.caregiver_name || 'Not set'} onClick={() => { setNewCaregiver(profile.caregiver_name || ''); setModal('caregiver') }} />
+          <Row 
+            label="I am a caregiver" 
+            onClick={() => patchProfile({ is_caregiver: !profile.is_caregiver })}
+            rightEl={
+              <div style={{
+                width: 44, height: 24, borderRadius: 12,
+                background: profile.is_caregiver ? '#20A090' : '#E0E0E0',
+                position: 'relative', cursor: 'pointer', transition: 'background 0.2s'
+              }}>
+                <div style={{
+                  width: 20, height: 20, borderRadius: 10, background: 'white',
+                  position: 'absolute', top: 2,
+                  left: profile.is_caregiver ? 22 : 2,
+                  transition: 'left 0.2s',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.2)'
+                }} />
+              </div>
+            }
+          />
         </Section>
 
         <Section title="Health" icon="🏥">

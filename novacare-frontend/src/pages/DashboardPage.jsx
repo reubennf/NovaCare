@@ -488,7 +488,20 @@ export default function DashboardPage() {
             <span style={{ color: 'black', fontSize: 14, fontWeight: 400 }}>Decorate</span>
         </div>
         </div>
-            
+        {profile?.is_caregiver && (
+        <div
+            onClick={() => navigate('/caregiver')}
+            style={{
+            height: 52, background: 'linear-gradient(135deg, #20A090, #17877A)',
+            boxShadow: '0px 4px 9px rgba(32,160,144,0.3)',
+            borderRadius: 30, display: 'flex', alignItems: 'center',
+            justifyContent: 'center', cursor: 'pointer', gap: 8
+            }}
+        >
+            <span style={{ fontSize: 18 }}>👨‍⚕️</span>
+            <span style={{ color: 'white', fontSize: 15, fontWeight: 600 }}>Caregiver Dashboard</span>
+        </div>
+        )}
       </div>
 
       {/* Floating animation */}

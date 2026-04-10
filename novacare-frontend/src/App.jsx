@@ -131,6 +131,7 @@ function AppRoutes() {
         <Route path="/medications" element={<ProtectedRoute><MedicationsPage /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
         <Route path="/play" element={<ProtectedRoute><PlayPage /></ProtectedRoute>} />
+        <Route path="/caregiver" element={<ProtectedRoute><CaregiverPage /></ProtectedRoute>} />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/welcome" />} />
