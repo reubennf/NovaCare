@@ -267,6 +267,22 @@ export default function CompanionPage() {
         <span style={{ color: '#20A090', fontSize: 20, fontWeight: 700 }}>Care</span>
       </div>
 
+      {/* Clear chat button — ADD THIS */}
+      <div
+        onClick={() => {
+          if (window.confirm('Clear chat history?')) {
+            clearChatStore()
+            setMessages([])
+            setThreadId(null)
+            setSuggestions([])
+          }
+        }}
+        style={{ position: 'absolute', right: 24, cursor: 'pointer', fontSize: 12, color: '#aaa', fontWeight: 600 }}
+      >
+        Clear
+      </div>
+      
+
       {/* Greeting bubble */}
       <div style={{ margin: '0 auto 8px', background: 'rgba(32,160,144,0.16)', borderRadius: 36, padding: '10px 24px', flexShrink: 0 }}>
         <span style={{ color: 'black', fontSize: 16, fontWeight: 400 }}>{greeting}</span>
