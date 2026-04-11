@@ -269,14 +269,18 @@ export default function CompanionPage() {
 
       {/* Clear chat button — ADD THIS */}
       <div
-        onClick={() => {
-          if (window.confirm('Clear chat history?')) {
-            clearChatStore()
-            setMessages([])
-            setThreadId(null)
-            setSuggestions([])
-          }
-        }}
+       onClick={() => {
+        if (window.confirm('Clear chat history?')) {
+          // Clear localStorage directly
+          localStorage.removeItem('novacare_chat_messages')
+          localStorage.removeItem('novacare_chat_thread_id')
+          // Reset all state
+          setMessages([])
+          setThreadId(null)
+          setSuggestions([])
+          setSending(false)
+        }
+      }}
         style={{ position: 'absolute', right: 24, cursor: 'pointer', fontSize: 12, color: '#aaa', fontWeight: 600, zIndex: 10 }}
       >
         Clear
