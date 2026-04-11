@@ -535,11 +535,11 @@ export default function DashboardPage() {
         {/* Warnings */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
             {[
-            { emoji: '🔬', text: 'This is a prototype demo — not a production app' },
+            { emoji: '🔬', text: 'This is a prototype demo, not a production app' },
             { emoji: '🚧', text: 'Not all features are fully functional yet' },
             { emoji: '👥', text: 'Friends & social features are still in development' },
-            { emoji: '📱', text: 'Interface is optimised for specific screen sizes — may not look ideal on all devices' },
-            { emoji: '⏳', text: 'Loading and chat may be a bit slow — this is expected for the prototype' },
+            { emoji: '📱', text: 'Interface is optimised for specific screen sizes, may not look ideal on all devices' },
+            { emoji: '⏳', text: 'Loading and chat may be a bit slow, this is expected for the prototype' },
             ].map(({ emoji, text }) => (
             <div key={text} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                 <span style={{ fontSize: 16, flexShrink: 0 }}>{emoji}</span>
