@@ -277,7 +277,7 @@ export default function CompanionPage() {
             setSuggestions([])
           }
         }}
-        style={{ position: 'absolute', right: 24, cursor: 'pointer', fontSize: 12, color: '#aaa', fontWeight: 600 }}
+        style={{ position: 'absolute', right: 24, cursor: 'pointer', fontSize: 12, color: '#aaa', fontWeight: 600, zIndex: 10 }}
       >
         Clear
       </div>
