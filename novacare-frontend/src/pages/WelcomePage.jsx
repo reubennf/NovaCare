@@ -3,6 +3,23 @@ import { useNavigate } from 'react-router-dom'
 export default function WelcomePage() {
   const navigate = useNavigate()
 
+  useEffect(() => {
+    const autoLogin = async () => {
+      // Check if already logged in
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) return // already logged in, ProtectedRoute handles redirect
+
+      // Auto login with demo account
+      const { error } = await supabase.auth.signInWithPassword({
+        email: 'demo@novacare.sg',
+        password: 'novacare123'
+      })
+      if (error) console.log('Auto login failed:', error.message)
+      // If success, AuthContext will update and ProtectedRoute redirects to dashboard
+    }
+    autoLogin()
+  }, [])
+
   return (
     <div style={{
       width: 390,
