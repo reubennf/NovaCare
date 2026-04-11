@@ -1,4 +1,6 @@
 import { useNavigate } from 'react-router-dom'
+import { useEffect } from 'react'
+import { supabase } from '../lib/supabase'
 
 export default function WelcomePage() {
   const navigate = useNavigate()
