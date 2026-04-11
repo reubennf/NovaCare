@@ -41,7 +41,7 @@ export default function DashboardPage() {
   const [careStatus, setCareStatus] = useState(null)
   const [loading, setLoading] = useState(true)
   const [caring, setCaring] = useState(null)
-
+  const [showDisclaimer, setShowDisclaimer] = useState(true)
   const getGreeting = () => {
     const hour = new Date().getHours()
     if (hour < 12) return 'Good morning'
@@ -511,7 +511,58 @@ export default function DashboardPage() {
           50% { transform: translateY(-8px); }
         }
       `}</style>
+    {/* Prototype disclaimer */}
+    {showDisclaimer && (
+    <div style={{
+        position: 'fixed', inset: 0, zIndex: 100,
+        background: 'rgba(0,0,0,0.5)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '0 24px'
+    }}>
+        <div style={{
+        background: 'white', borderRadius: 24,
+        padding: '24px', width: '100%', maxWidth: 340,
+        }}>
+        {/* Title */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+            <span style={{ fontSize: 28 }}>⚠️</span>
+            <div>
+            <p style={{ margin: 0, fontWeight: 700, fontSize: 16, color: 'black' }}>Prototype Demo</p>
+            <p style={{ margin: 0, fontSize: 12, color: '#888' }}>NovaCare — Early Preview</p>
+            </div>
+        </div>
 
+        {/* Warnings */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+            {[
+            { emoji: '🔬', text: 'This is a prototype demo — not a production app' },
+            { emoji: '🚧', text: 'Not all features are fully functional yet' },
+            { emoji: '👥', text: 'Friends & social features are still in development' },
+            { emoji: '📱', text: 'Interface is optimised for specific screen sizes — may not look ideal on all devices' },
+            { emoji: '⏳', text: 'Loading and chat may be a bit slow — this is expected for the prototype' },
+            ].map(({ emoji, text }) => (
+            <div key={text} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                <span style={{ fontSize: 16, flexShrink: 0 }}>{emoji}</span>
+                <p style={{ margin: 0, fontSize: 13, color: '#555', lineHeight: 1.5 }}>{text}</p>
+            </div>
+            ))}
+        </div>
+
+        {/* Close button */}
+        <button
+            onClick={() => setShowDisclaimer(false)}
+            style={{
+            width: '100%', height: 48, background: '#20A090',
+            border: 'none', borderRadius: 24, color: 'white',
+            fontSize: 15, fontWeight: 600, fontFamily: 'Inter',
+            cursor: 'pointer'
+            }}
+        >
+            Got it, let's go! 🚀
+        </button>
+        </div>
+    </div>
+    )}
     </div>
   )
 }
